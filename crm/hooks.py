@@ -429,6 +429,7 @@ ignore_links_on_delete = ["Failed Lead Sync Log"]
 on_session_creation = ["crm.api.onboarding.complete_setup_for_fc_site"]
 
 after_migrate = [
+	"crm.api.marloa_work_apps.seed_defaults",
 	"crm.fcrm.doctype.fcrm_settings.fcrm_settings.after_migrate",
 	"crm.api.whatsapp.add_roles",
 	"crm.install.add_default_scripts",

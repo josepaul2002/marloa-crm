@@ -1,0 +1,46 @@
+{
+  "doctype": "DocType",
+  "name": "Marloa Work App",
+  "module": "FCRM",
+  "autoname": "hash",
+  "engine": "InnoDB",
+  "field_order": [
+    "title",
+    "url",
+    "category",
+    "enabled"
+  ],
+  "fields": [
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "url",
+      "label": "Url",
+      "fieldtype": "Data",
+      "length": 2048
+    },
+    {
+      "fieldname": "category",
+      "label": "Category",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "enabled",
+      "label": "Enabled",
+      "fieldtype": "Check",
+      "default": "1"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    }
+  ],
+  "track_changes": 1
+}

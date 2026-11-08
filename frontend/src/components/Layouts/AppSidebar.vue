@@ -111,6 +111,7 @@
               </SidebarItem>
             </nav>
           </CollapsibleSection>
+          <WorkApps :collapsed="isCollapsed" />
         </div>
 
         <div v-if="!mobile" class="mt-auto flex flex-col gap-1 pt-2">
@@ -188,6 +189,7 @@
 </template>
 
 <script setup>
+import WorkApps from './WorkApps.vue'
 import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'
