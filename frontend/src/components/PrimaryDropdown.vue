@@ -29,12 +29,14 @@
             :option="option"
             :placeholder="itemPlaceholder"
             :validate="validate"
+            :phoneInput="phoneInput"
           />
           <PrimaryDropdownItem
             v-if="draft"
             :option="draft"
             :placeholder="itemPlaceholder"
             :validate="validate"
+            :phoneInput="phoneInput"
           />
           <div v-if="!options.length && !draft">
             <div class="p-1.5 pl-3 pr-4 text-base text-ink-gray-4">
@@ -67,6 +69,7 @@ const props = defineProps({
   itemPlaceholder: { type: String, default: '' },
   options: { type: Array, default: () => [] },
   validate: { type: Function, default: null },
+  phoneInput: { type: Boolean, default: false },
   onCreate: { type: Function, default: null },
   label: { type: String, default: '' },
 })

@@ -60,6 +60,7 @@ import { isMobileView } from '@/composables/settings'
 import { showQuickEntryModal, quickEntryProps } from '@/composables/modals'
 import { useDocument } from '@/data/document'
 import { evaluateDependsOnValue } from '@/utils'
+import { phoneError } from '@/utils/internationalPhone'
 import { useDoctypeModal } from '@/composables/doctypeModal'
 import { useTelemetry } from '@framework/ui/telemetry'
 import { Dialog, createResource } from 'frappe-ui'
@@ -114,12 +115,8 @@ function validateRequiredFields() {
     return __('Invalid Email Address')
   }
 
-  if (
-    _contact.doc.mobile_no &&
-    isNaN(_contact.doc.mobile_no.replace(/[-+() ]/g, ''))
-  ) {
-    return __('Mobile number should be a number')
-  }
+  const mobileError = phoneError(_contact.doc.mobile_no)
+  if (mobileError) return __(mobileError)
 
   return null
 }
@@ -218,6 +215,9 @@ const tabs = createResource({
 onMounted(() => {
   _contact.doc = {}
   Object.assign(_contact.doc, props.contact.data || props.contact)
+  if (_contact.doc.custom_whatsapp_uses_the_same_number == null) {
+    _contact.doc.custom_whatsapp_uses_the_same_number = 1
+  }
 })
 
 function openQuickEntryModal() {

@@ -2,7 +2,30 @@
   <div>
     <!-- Tabbable so the popover focuses the row on open, not the first action
          button, which would pop its tooltip open -->
+    <div
+      v-if="editMode && phoneInput"
+      class="space-y-2 rounded bg-surface-gray-2 p-2"
+    >
+      <InternationalPhoneInput ref="inputRef" v-model="localOption.value" />
+      <div class="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          :label="__('Save')"
+          :loading="saving"
+          @click.stop="saveOption"
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          :label="__('Cancel')"
+          :disabled="saving"
+          @click.stop="cancelEdit"
+        />
+      </div>
+    </div>
     <ItemListRow
+      v-else
       class="group"
       size="sm"
       :class="editMode ? '' : 'cursor-pointer hover:bg-surface-gray-2'"
@@ -92,6 +115,8 @@
 </template>
 
 <script setup>
+import InternationalPhoneInput from '@/components/Controls/InternationalPhoneInput.vue'
+import { phoneError } from '@/utils/internationalPhone'
 import { ErrorMessage, ItemListRow, TextInput, Tooltip } from 'frappe-ui'
 import { nextTick, ref, onMounted, reactive, watch } from 'vue'
 
@@ -99,6 +124,7 @@ const props = defineProps({
   option: { type: Object, default: () => ({}) },
   placeholder: { type: String, default: '' },
   validate: { type: Function, default: null },
+  phoneInput: { type: Boolean, default: false },
 })
 
 const localOption = reactive({ ...props.option })
@@ -163,7 +189,13 @@ const saveOption = async () => {
   const value = localOption.value?.trim()
   if (!value) return
 
-  const error = props.validate?.(value)
+  if (props.phoneInput && !isNew.value && value === props.option.value) {
+    editMode.value = false
+    return
+  }
+
+  const error =
+    (props.phoneInput && phoneError(value)) || props.validate?.(value)
   if (error) {
     errorMessage.value = error
     nextTick(() => inputRef.value?.focus())

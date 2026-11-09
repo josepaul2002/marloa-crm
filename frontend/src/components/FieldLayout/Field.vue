@@ -314,6 +314,15 @@
       :disabled="Boolean(field.disabled)"
       @change="(v) => fieldChange(v, field)"
     />
+    <InternationalPhoneInput
+      v-else-if="isContactMobile"
+      :model-value="data[field.fieldname] || ''"
+      :label="field.label"
+      :placeholder="getPlaceholder(field)"
+      :disabled="Boolean(field.disabled)"
+      :description="field.description"
+      @update:model-value="(value) => fieldChange(value, field)"
+    />
     <FormControl
       v-else-if="field.options === 'Phone'"
       type="text"
@@ -347,6 +356,7 @@
   </div>
 </template>
 <script setup>
+import InternationalPhoneInput from '@/components/Controls/InternationalPhoneInput.vue'
 import Password from '@/components/Controls/Password.vue'
 import FormattedInput from '@/components/Controls/FormattedInput.vue'
 import DurationInput from '@/components/Controls/DurationInput.vue'
@@ -402,6 +412,9 @@ const props = defineProps({
 
 const data = inject('data')
 const doctype = inject('doctype')
+const isContactMobile = computed(
+  () => unref(doctype) === 'Contact' && props.field.fieldname === 'mobile_no',
+)
 const isNote = computed(() => unref(doctype) === 'FCRM Note')
 const docname = inject('docname', null)
 const preview = inject('preview')

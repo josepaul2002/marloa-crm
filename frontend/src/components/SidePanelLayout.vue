@@ -112,6 +112,10 @@
                           :validate="field.validate"
                           :onCreate="field.onCreate"
                           :label="field.label"
+                          :phoneInput="
+                            doctype === 'Contact' &&
+                            field.fieldname === 'mobile_no'
+                          "
                         />
                         <Checkbox
                           v-else-if="field.fieldtype == 'Check'"
