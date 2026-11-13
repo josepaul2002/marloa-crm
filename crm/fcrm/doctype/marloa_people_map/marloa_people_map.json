@@ -1,0 +1,86 @@
+{
+  "doctype": "DocType",
+  "name": "Marloa People Map",
+  "module": "FCRM",
+  "autoname": "field:organization",
+  "track_changes": 1,
+  "field_order": [
+    "organization",
+    "people_json",
+    "draft_json",
+    "research_status",
+    "research_error",
+    "research_user",
+    "research_scope",
+    "researched_at",
+    "revision",
+    "research_usage"
+  ],
+  "fields": [
+    {
+      "fieldname": "organization",
+      "label": "Organization",
+      "fieldtype": "Link",
+      "options": "CRM Organization",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "people_json",
+      "label": "People Json",
+      "fieldtype": "Long Text"
+    },
+    {
+      "fieldname": "draft_json",
+      "label": "Draft Json",
+      "fieldtype": "Long Text"
+    },
+    {
+      "fieldname": "research_status",
+      "label": "Research Status",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "research_error",
+      "label": "Research Error",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "research_user",
+      "label": "Research User",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "research_scope",
+      "label": "Research Scope",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "researched_at",
+      "label": "Researched At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "revision",
+      "label": "Revision",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "research_usage",
+      "label": "Research Usage",
+      "fieldtype": "Long Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC"
+}

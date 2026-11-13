@@ -168,3 +168,10 @@ Three patterns were considered:
 
 > Current stable API: [SPEC.md — formDialog API](./SPEC.md#formdialog-api)  
 > Full guide with examples: [feats/form-scripting/form-dialog.md](./feats/form-scripting/form-dialog.md)
+
+## Marloa organization people map — November 2026
+
+Implemented interactive organization people chart and separate reviewed research draft,
+Claude web search with optional PDL lookup, server-held settings, permission-scoped
+storage, concurrency checks and conservative Contact creation. See
+[people map guide](feats/people-map/guide.md) for setup, costs and validation boundaries.
