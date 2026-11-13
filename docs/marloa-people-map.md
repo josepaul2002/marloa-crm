@@ -76,3 +76,11 @@ simultaneous editors, worker completion, real researched sources, optional PDL a
 repeated contact creation. Review Fragomen global vs India scope, Synthite, and a small
 clinic with sparse data. Back up/redeploy previous CRM commit for rollback; retain the
 new tables for recovery. Do not delete customer data as part of rollback.
+
+## Native CRM appearance
+
+Uses frappe-ui Avatar, Badge, Button, Checkbox, ErrorMessage, FormControl and TextInput,
+with Lucide component icons, Frappe typography and semantic theme tokens. Canvas controls
+match the CRM workflow editor. Light and dark theme previews use real frappe-ui components
+with mocked sample data, not substitute controls. IDs are generated with Vue useId so
+organization names with spaces do not break SVG background patterns.

@@ -52,7 +52,7 @@ export function chartElements(people, collapsed = new Set(), query = '') {
         matched: !!query && `${person.name} ${person.title} ${person.department}`.toLowerCase().includes(query.toLowerCase()) } })
     if (byId.has(person.manager_id)) edges.push({ id: `e-${person.id}`, source: person.manager_id, target: person.id,
       label: person.relationship === 'confirmed' ? 'Reviewed' : person.relationship === 'sourced' ? 'Source-backed · review' : 'Inferred',
-      style: { stroke: person.relationship === 'confirmed' ? '#16a085' : '#9ca3af', strokeDasharray: person.relationship === 'confirmed' ? '0' : '6 4' } })
+      style: { stroke: 'var(--outline-gray-4)', strokeDasharray: person.relationship === 'confirmed' ? '0' : '6 4' } })
     if (cursor === start) cursor++
     return x
   }
