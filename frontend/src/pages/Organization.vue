@@ -171,6 +171,7 @@
         </Badge>
       </template>
       <template #tab-panel="{ tab }">
+        <OrganizationPeopleMap v-if="tab.value === 'people-map'" :key="props.organizationId" :organization="props.organizationId" @contacts-changed="contacts.reload()" />
         <DealsListView
           v-if="tab.label === 'Deals' && rows.length"
           class="mt-4"
@@ -186,7 +187,7 @@
           :options="{ selectable: false, showTooltip: false }"
         />
         <EmptyState
-          v-if="!rows.length"
+          v-if="tab.value !== 'people-map' && !rows.length"
           :icon="tab.iconLeft"
           :name="__(tab.label)"
           :description="
@@ -241,6 +242,7 @@ import DealModal from '@/components/Modals/DealModal.vue'
 import Link from '@/components/Controls/Link.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import EnrichFromWebsite from '@/components/EnrichFromWebsite.vue'
+import OrganizationPeopleMap from '@/components/OrganizationPeopleMap.vue'
 import { useDocument } from '@/data/document'
 import { getSettings } from '@/stores/settings'
 import { globalStore } from '@/stores/global'
@@ -442,6 +444,7 @@ const tabs = [
     iconLeft: ContactsIcon,
     count: computed(() => contacts.data?.length),
   },
+  { value: 'people-map', label: 'Org Chart', iconLeft: ContactsIcon, count: '•' },
 ]
 
 const deals = createListResource({

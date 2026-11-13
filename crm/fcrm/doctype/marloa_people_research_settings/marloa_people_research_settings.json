@@ -1,0 +1,45 @@
+{
+  "doctype": "DocType",
+  "name": "Marloa People Research Settings",
+  "module": "FCRM",
+  "issingle": 1,
+  "field_order": [
+    "anthropic_api_key",
+    "model",
+    "pdl_api_key",
+    "daily_run_limit"
+  ],
+  "fields": [
+    {
+      "fieldname": "anthropic_api_key",
+      "fieldtype": "Password",
+      "label": "Anthropic API key"
+    },
+    {
+      "fieldname": "model",
+      "fieldtype": "Data",
+      "label": "Research model",
+      "default": "claude-sonnet-4-6"
+    },
+    {
+      "fieldname": "pdl_api_key",
+      "fieldtype": "Password",
+      "label": "People Data Labs API key (optional)"
+    },
+    {
+      "fieldname": "daily_run_limit",
+      "fieldtype": "Int",
+      "label": "Maximum research runs per day",
+      "default": "20",
+      "description": "Site-wide limit, including failed attempts. Each run uses at most five searches."
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    }
+  ]
+}
