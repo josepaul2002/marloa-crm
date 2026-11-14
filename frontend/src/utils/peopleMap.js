@@ -64,3 +64,8 @@ export function chartElements(people, collapsed = new Set(), query = '') {
   }
   return { nodes, edges }
 }
+
+export function peopleMapError(error) {
+  const messages = Array.isArray(error?.messages) ? error.messages.filter(m => typeof m === 'string' && m.trim()) : []
+  return messages.join(' ') || error?.message || 'Action failed.'
+}
