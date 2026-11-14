@@ -136,7 +136,7 @@ import UserPlusIcon from '~icons/lucide/user-plus'
 import ChevronRightIcon from '~icons/lucide/chevron-right'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import { Background } from '@vue-flow/background'
-import { chartElements, mergePeople } from '@/utils/peopleMap'
+import { chartElements, mergePeople, peopleMapError } from '@/utils/peopleMap'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 
@@ -166,9 +166,9 @@ async function load() {
     if (!dirty.value) people.value = result.people || []
     if (result.research_error) error.value = result.research_error
     if (running.value) timer = setTimeout(load, 4000)
-  } catch (e) { error.value = e.message || 'Could not load the people map.' }
+  } catch (e) { error.value = peopleMapError(e) }
 }
-async function perform(fn) { busy.value = true; error.value = ''; try { await fn() } catch(e) { error.value = e.message || 'Action failed.' } finally { busy.value = false } }
+async function perform(fn) { busy.value = true; error.value = ''; try { await fn() } catch(e) { error.value = peopleMapError(e) } finally { busy.value = false } }
 function save() { return perform(async () => { state.value = await call(prefix + 'save_map', { organization: props.organization, people: JSON.stringify(people.value), revision: state.value.revision || 0 }); people.value = state.value.people; dirty.value = false }) }
 function research() { return perform(async () => { const result = await call(prefix + 'start_research', { organization: props.organization, scope: scope.value, use_pdl: usePdl.value }); if (dirty.value) result.revision = state.value.revision; state.value = result; showResearch.value = false; clearTimeout(timer); timer = setTimeout(load, 2000) }) }
 function mergeDraft() { people.value = mergePeople(people.value, (state.value.draft || []).filter(p => selected.value.includes(p.id))); selected.value = []; dirty.value = true }

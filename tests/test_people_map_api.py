@@ -81,6 +81,21 @@ class ApiTests(unittest.TestCase):
         result = api._source_urls([{'type':'web_search_tool_result','content':[{'url':'https://example.com/team'}]}])
         self.assertEqual(result, {'https://example.com/team'})
 
+    def test_research_reads_json_split_across_citation_text_blocks(self):
+        data = {'content': [{'type':'text','text':'[{"id":"a","name":"A",'},
+            {'type':'text','text':'"title":"Director","sources":["https://example.com/team"]}]'},
+            {'type':'text','text':'\n'}]}
+        self.assertEqual(api._research_people(data)[0]['name'], 'A')
+
+    def test_research_accepts_fenced_array_with_explanatory_text(self):
+        self.assertEqual(api._research_people({'content':[{'type':'text',
+            'text':'Results:\n```json\n[]\n```\nNo verified people found.'}]}), [])
+
+    def test_research_rejects_unstructured_or_ambiguous_output_clearly(self):
+        for text in ('I could not complete this search.', '[] and []', ''):
+            with self.subTest(text=text), self.assertRaisesRegex(ValueError, 'readable people list'):
+                api._research_people({'content':[{'type':'text','text':text}]})
+
     def test_pdl_request_is_bounded_and_no_personal_data_is_forwarded(self):
         response = MagicMock(status_code=200)
         response.json.return_value = {'data':[{'full_name':'A','job_title':'Director','work_email':'secret@example.com','linkedin_url':'linkedin.com/in/a'}]}

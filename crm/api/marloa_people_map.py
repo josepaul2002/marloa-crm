@@ -137,6 +137,30 @@ def _source_urls(blocks):
     return urls
 
 
+def _research_people(data):
+    # Web search citations may split the answer into several text blocks.
+    # Parse the complete answer, never just its final (possibly blank) block.
+    output = "".join(b.get("text", "") for b in data.get("content", [])
+        if b.get("type") == "text")
+    decoder = json.JSONDecoder()
+    arrays = []
+    cursor = 0
+    while cursor < len(output):
+        start = output.find("[", cursor)
+        if start < 0:
+            break
+        try:
+            value, end = decoder.raw_decode(output, start)
+        except json.JSONDecodeError:
+            cursor = start + 1
+            continue
+        arrays.append(value)
+        cursor = end
+    if len(arrays) != 1:
+        raise ValueError("Claude did not return a readable people list. No saved chart was changed. Try a narrower office or country after the retry limit expires.")
+    return validate_people(arrays[0], researched=True)
+
+
 def research_job(organization, user, use_pdl=False):
     frappe.set_user(user)
     try:
@@ -172,11 +196,7 @@ Put uncertainty or past-role concerns in notes; exclude people known to have lef
         data = response.json()
         if data.get("stop_reason") != "end_turn":
             raise ValueError("Research did not finish within its limit. No saved chart was changed.")
-        texts = [b["text"] for b in data.get("content", []) if b.get("type") == "text"]
-        output = texts[-1].strip() if texts else ""
-        if output.startswith("```"):
-            output = output.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        people = validate_people(json.loads(output), researched=True)
+        people = _research_people(data)
         allowed = _source_urls(data.get("content", []))
         for p in candidates:
             if p.get("linkedin_url"):

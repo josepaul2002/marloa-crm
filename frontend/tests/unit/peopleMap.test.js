@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chartElements, mergePeople } from '../../src/utils/peopleMap'
+import { chartElements, mergePeople, peopleMapError } from '../../src/utils/peopleMap'
 const person = (id, manager_id = '', extra = {}) => ({ id, name: id, title: 'Director', department: 'Operations', manager_id, relationship: 'confirmed', ...extra })
 describe('people map', () => {
   it('keeps reviewed people and maps newly selected manager IDs', () => {
@@ -21,5 +21,14 @@ describe('people map', () => {
     const graph = chartElements([person('a'), person('b', 'a', { relationship: 'inferred' })], new Set(), 'b')
     expect(graph.edges[0].style.strokeDasharray).toBe('6 4')
     expect(graph.nodes.find(n => n.id === 'b').data.matched).toBe(true)
+  })
+})
+
+describe('people map errors', () => {
+  it('shows Frappe validation messages instead of the endpoint name', () => {
+    expect(peopleMapError({message:'/api/method/test ValidationError', messages:['Research is limited to once per company every 30 minutes.']})).toBe('Research is limited to once per company every 30 minutes.')
+  })
+  it('keeps a useful fallback for network errors', () => {
+    expect(peopleMapError(new Error('Network unavailable'))).toBe('Network unavailable')
   })
 })
