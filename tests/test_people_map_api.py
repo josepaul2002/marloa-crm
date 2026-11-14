@@ -64,6 +64,27 @@ class ApiTests(unittest.TestCase):
                 api.start_research('company')
         self.f.enqueue.assert_not_called()
 
+    def test_finished_research_can_restart_immediately(self):
+        doc = types.SimpleNamespace(research_status='Failed', researched_at='2026-11-14 06:13:14',
+            save=MagicMock())
+        cache = self.f.cache.return_value
+        cache.incr.return_value = 1
+        self.f.get_single.return_value.daily_run_limit = 20
+        with patch.object(api, '_config', return_value='configured'), \
+             patch.object(api, '_locked_map', return_value=doc), \
+             patch.object(api, 'get_map', return_value={}):
+            api.start_research('company')
+        self.f.enqueue.assert_called_once()
+        self.assertEqual(doc.research_status, 'Queued')
+
+    def test_running_research_still_blocks_duplicate_requests(self):
+        for status in ('Queued', 'Running'):
+            with self.subTest(status=status), patch.object(api, '_config', return_value='configured'), \
+                 patch.object(api, '_locked_map', return_value=types.SimpleNamespace(research_status=status)):
+                with self.assertRaisesRegex(ValueError, 'already running'):
+                    api.start_research('company')
+        self.f.enqueue.assert_not_called()
+
     def test_contact_permission_is_required(self):
         self.f.has_permission.return_value = False
         with self.assertRaisesRegex(ValueError, 'permission'):

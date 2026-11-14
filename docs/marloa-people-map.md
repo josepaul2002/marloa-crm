@@ -45,8 +45,9 @@ Each requested run: one Claude Messages request, max 5 searches, max 6,500 outpu
 Optional PDL query: up to 10 returned profiles; its separate credits/access rules apply.
 No automatic provider top-ups, retries, scheduled refresh, phone/email reveal, direct
 LinkedIn scraping or paid fallback providers. A run may still cost credits when it fails.
-Reopening saved data does not call providers. Runs are limited to once per organization
-per 30 minutes plus a site-wide daily Redis counter. New runs count even when they fail.
+Reopening saved data does not call providers. There is no fixed retry delay after a run
+finishes or fails. Duplicate queued/running jobs are blocked. A site-wide daily Redis
+counter remains in place; new runs count even when they fail.
 Usage metadata from Claude and PDL profile counts are stored; this is not a dollar bill.
 PDL defaults to off. Respect provider retention/license terms before enabling ongoing use.
 

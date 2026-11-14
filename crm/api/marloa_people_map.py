@@ -4,7 +4,7 @@ import os
 
 import frappe
 import requests
-from frappe.utils import now_datetime, get_datetime, today
+from frappe.utils import now_datetime, today
 
 from crm.api.people_map_validation import safe_url, validate_people
 
@@ -82,8 +82,6 @@ def start_research(organization, scope="", use_pdl=False):
     doc = _locked_map(organization)
     if doc.research_status in ("Queued", "Running"):
         frappe.throw("Research is already running. Please wait for its result.")
-    if doc.researched_at and (now_datetime() - get_datetime(doc.researched_at)).total_seconds() < 1800:
-        frappe.throw("Research is limited to once per company every 30 minutes. Saved results are free to reopen.")
     limit = max(1, min(200, int(frappe.get_single("Marloa People Research Settings").daily_run_limit or 20)))
     cache = frappe.cache()
     counter_key = "marloa_people_runs:" + today()
