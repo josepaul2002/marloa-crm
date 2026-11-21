@@ -5,6 +5,11 @@
       <form v-else-if="preferences" class="space-y-6 pb-8" @submit.prevent="save">
         <p v-if="!preferences.configured" class="rounded-lg bg-surface-gray-2 p-3 text-sm text-ink-gray-6">{{ __('Your hours are not set yet. Colleagues will see availability unknown until you save them.') }}</p>
         <FormControl v-model="preferences.timezone" type="select" :options="timezones" :label="__('Your time zone')" />
+        <section class="space-y-3">
+          <h3 class="text-base font-semibold text-ink-gray-9">{{ __('Meeting limits') }}</h3>
+          <FormControl v-model="preferences.max_in_person_per_day" type="number" min="0" max="100" :label="__('Maximum in-person meetings per day')" :placeholder="__('Unlimited')" />
+          <p class="text-sm text-ink-gray-5">{{ __('Leave blank for unlimited. Set 0 if you do not accept in-person meetings. Your local time zone determines the day.') }}</p>
+        </section>
         <section class="space-y-4">
           <h3 class="text-base font-semibold text-ink-gray-9">{{ __('Weekly hours') }}</h3>
           <div class="flex flex-wrap gap-2"><Button v-for="m in modes" :key="m" :label="__(m)" :variant="mode === m ? 'subtle' : 'ghost'" @click="mode = m" /></div>
@@ -14,7 +19,7 @@
             <div class="space-y-2">
               <p v-if="!preferences.weekly[mode][index].length" class="text-sm text-ink-gray-5">{{ __('Unavailable') }}</p>
               <div v-for="(window, i) in preferences.weekly[mode][index]" :key="i" class="flex items-center gap-2">
-                <TimePicker v-model="window[0]" :aria-label="day + ' start'" /><span class="text-ink-gray-5">–</span><TimePicker v-model="window[1]" :aria-label="day + ' end'" />
+                <TimePicker format="h:mm A" v-model="window[0]" :aria-label="day + ' start'" /><span class="text-ink-gray-5">–</span><TimePicker format="h:mm A" v-model="window[1]" :aria-label="day + ' end'" />
                 <Button icon="lucide-x" :aria-label="__('Remove time window')" @click="preferences.weekly[mode][index].splice(i, 1)" />
               </div>
               <Button v-if="preferences.weekly[mode][index].length < 4" icon-left="lucide-plus" :label="__('Add hours')" @click="preferences.weekly[mode][index].push(['09:00', '18:00'])" />
@@ -26,7 +31,7 @@
           <p class="text-sm text-ink-gray-5">{{ __('These replace the regular hours for that date and meeting type. Leave hours empty to take the day off.') }}</p>
           <div v-for="(row, i) in preferences.exceptions" :key="i" class="space-y-3 rounded-lg border border-outline-gray-2 p-3">
             <div class="grid gap-3 sm:grid-cols-2"><DatePicker v-model="row.date" :label="__('Date')" /><FormControl v-model="row.mode" type="select" :options="modes" :label="__('Meeting type')" /></div>
-            <div v-for="(window, j) in row.windows" :key="j" class="flex items-center gap-2"><TimePicker v-model="window[0]" /><span>–</span><TimePicker v-model="window[1]" /><Button icon="lucide-x" :aria-label="__('Remove hours')" @click="row.windows.splice(j,1)" /></div>
+            <div v-for="(window, j) in row.windows" :key="j" class="flex items-center gap-2"><TimePicker format="h:mm A" v-model="window[0]" /><span>–</span><TimePicker format="h:mm A" v-model="window[1]" /><Button icon="lucide-x" :aria-label="__('Remove hours')" @click="row.windows.splice(j,1)" /></div>
             <div class="flex gap-2"><Button v-if="row.windows.length < 4" :label="__('Add hours')" @click="row.windows.push(['09:00','18:00'])" /><Button :label="__('Remove date')" @click="preferences.exceptions.splice(i,1)" /></div>
           </div>
           <Button icon-left="lucide-plus" :label="__('Add date override')" @click="preferences.exceptions.push({ date: '', mode, windows: [] })" />
@@ -51,6 +56,10 @@
           <p class="text-sm text-ink-gray-5">{{ __('Your primary work calendar is always checked. Optionally include other calendars. The organizer still needs Google permission to check them.') }}</p>
           <Button :label="__('Load my Google calendars')" :loading="calendarLoading" @click="loadCalendars" />
           <div v-for="calendar in calendars" :key="calendar.id" class="rounded border border-outline-gray-2 p-3"><FormControl :model-value="preferences.calendar_ids.includes(calendar.id)" type="checkbox" :label="calendar.label" @update:model-value="value => toggleCalendar(calendar.id, value)" /></div>
+          <h4 class="text-sm font-medium text-ink-gray-9">{{ __('Observed holidays') }}</h4>
+          <p class="text-sm text-ink-gray-5">{{ __('Subscribe to the appropriate country or regional holiday calendar in Google Calendar, then load calendars here. Select the calendars whose holidays should block your availability.') }}</p>
+          <a href="https://calendar.google.com/calendar/u/0/r/settings/browsecalendars" target="_blank" rel="noopener noreferrer" class="text-sm underline text-ink-gray-7">{{ __('Browse Google holiday calendars') }}</a>
+          <div v-for="calendar in calendars" :key="'holiday-'+calendar.id" class="rounded border border-outline-gray-2 p-3"><FormControl :model-value="preferences.holiday_calendar_ids.includes(calendar.id)" type="checkbox" :label="calendar.label" @update:model-value="value => toggleHoliday(calendar.id, value)" /></div>
           <p v-if="calendarError" class="text-sm text-ink-gray-5">{{ calendarError }}</p>
         </section>
         <p v-if="error" role="alert" class="text-sm text-ink-red-5">{{ error }}</p>
@@ -62,6 +71,7 @@
   </SettingsLayoutBase>
 </template>
 <script setup>
+import { timezoneOptions } from './timezones'
 import GoogleAddressField from './GoogleAddressField.vue'
 import { ref, onMounted } from 'vue'
 import { Button, FormControl, DatePicker, TimePicker, call } from 'frappe-ui'
@@ -70,16 +80,17 @@ const canManagePlaces = ref(false), browserKey = ref('')
 const preferences = ref(null), revision = ref(''), sharedPlaces = ref([]), mode = ref('Online')
 const loading = ref(true), saving = ref(false), error = ref(''), saved = ref(false), calendars = ref([]), calendarLoading = ref(false), calendarError = ref('')
 const modes = ['Online', 'In person'], days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-const timezones = [...new Set(['Asia/Kolkata', 'Australia/Sydney', ...(Intl.supportedValuesOf?.('timeZone') || [])])]
+const timezones = timezoneOptions
 const travelModes = [{ label: __('Driving'), value: 'DRIVE' }, { label: __('Two-wheeler'), value: 'TWO_WHEELER' }, { label: __('Walking'), value: 'WALK' }, { label: __('Public transport'), value: 'TRANSIT' }, { label: __('Cycling'), value: 'BICYCLE' }]
 function managePlaces() { window.open('/desk/crm-meeting-place', '_blank', 'noopener,noreferrer') }
-function apply(r) { browserKey.value = r.places_browser_key || ''; canManagePlaces.value = Boolean(r.can_manage_places); preferences.value = r.preferences; revision.value = r.revision; sharedPlaces.value = r.places || [] }
+function apply(r) { browserKey.value = r.places_browser_key || ''; canManagePlaces.value = Boolean(r.can_manage_places); preferences.value = { holiday_calendar_ids: [], ...r.preferences }; revision.value = r.revision; sharedPlaces.value = r.places || [] }
 onMounted(async () => { try { apply(await call('crm.meetings.preferences.get_preferences')) } catch(e) { error.value = e.message } finally { loading.value = false } })
 function addPlace() { preferences.value.places.push({ id: crypto.randomUUID(), label: '', address: '' }) }
 function copyHours() { preferences.value.weekly['In person'] = JSON.parse(JSON.stringify(preferences.value.weekly.Online)) }
 function preset() { preferences.value.weekly[mode.value] = days.map((_,i) => i < 5 ? [['09:00','18:00']] : []) }
 function removePlace(i) { const id = preferences.value.places[i].id; preferences.value.places.splice(i,1); if (preferences.value.default_place === id) preferences.value.default_place = '' }
 function toggleCalendar(id, value) { const ids = new Set(preferences.value.calendar_ids); value ? ids.add(id) : ids.delete(id); preferences.value.calendar_ids = [...ids] }
+function toggleHoliday(id, value) { const ids = new Set(preferences.value.holiday_calendar_ids); value ? ids.add(id) : ids.delete(id); preferences.value.holiday_calendar_ids = [...ids] }
 async function loadCalendars() { calendarLoading.value = true; calendarError.value = ''; try { calendars.value = await call('crm.meetings.preferences.list_my_calendars') } catch(e) { calendarError.value = e.message } finally { calendarLoading.value = false } }
 async function save() { saving.value = true; error.value = ''; saved.value = false; try { apply(await call('crm.meetings.preferences.save_preferences', { preferences: JSON.stringify(preferences.value), revision: revision.value })); saved.value = true } catch(e) { error.value = e.message } finally { saving.value = false } }
 </script>

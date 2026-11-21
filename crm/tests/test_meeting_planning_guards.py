@@ -62,4 +62,34 @@ class PlanningGuards(unittest.TestCase):
  def test_required_selection_cannot_be_omitted(self):
   m,_,_,_=self.load()
   with self.assertRaises(ValueError):m.check_before_send('DEAL',{'start':'2030-01-01','end':'2030-01-02'})
+ def test_adjacent_visit_routes_are_private_and_bidirectional(self):
+  m,_,p,_=self.load();service=MagicMock()
+  service.events.return_value.list.return_value.execute.return_value={'items':[{'id':'other','start':{'dateTime':'2030-01-01T14:00:00+05:30'},'end':{'dateTime':'2030-01-01T15:00:00+05:30'},'location':'Private next venue'}]}
+  person={'ids':['employee@work.in'],'preferences':p,'travel_mode':'DRIVE','origin':'PRIVATE ADDRESS'}
+  m.route_minutes=lambda a,b,*args:(45,None)
+  start=m.aware('2030-01-01 09:00','Asia/Kolkata');end=m.aware('2030-01-01 18:00','Asia/Kolkata')
+  m.enrich_constraints(service,person,start,end,'Customer office','In person',budget={'remaining':4})
+  self.assertEqual(person['journeys'][0]['to_minutes'],45)
+  self.assertNotIn('Private next venue',str(person['journeys']))
+ def test_hidden_event_location_remains_unknown(self):
+  m,_,p,_=self.load();service=MagicMock()
+  service.events.return_value.list.return_value.execute.return_value={'items':[{'id':'hidden','start':{'dateTime':'2030-01-01T14:00:00+05:30'},'end':{'dateTime':'2030-01-01T15:00:00+05:30'}}]}
+  person={'ids':['employee@work.in'],'preferences':p,'travel_mode':'DRIVE','origin':'PRIVATE ADDRESS'}
+  m.route_minutes=MagicMock()
+  m.enrich_constraints(service,person,m.aware('2030-01-01 09:00','Asia/Kolkata'),m.aware('2030-01-01 18:00','Asia/Kolkata'),'Customer office','In person')
+  self.assertIsNone(person['journeys'][0]['to_minutes']);m.route_minutes.assert_not_called()
+ def test_coordinate_waypoint_validation(self):
+  m,_,_,_=self.load()
+  self.assertEqual(m.route_point('9.9312, 76.2673')['location']['latLng']['latitude'],9.9312)
+  with self.assertRaises(ValueError):m.route_point('91, 181')
+ def test_physical_week_preview_routes_without_selected_time(self):
+  m,_,_,_=self.load();service=MagicMock()
+  service.freebusy.return_value.query.return_value.execute.return_value={'calendars':{'employee@work.in':{'busy':[]}}}
+  service.events.return_value.list.return_value.execute.return_value={'items':[]}
+  m.own_service=lambda:(service,None);m.route_minutes=lambda *a:(20,None)
+  data=self.request();data.update(mode='In person',location='Office')
+  data['attendees'][0].update(origin_source='manual',origin_address='Departure')
+  result=m.plan('DEAL',data)
+  self.assertEqual(result['people'][0]['travel_minutes'],20)
+  self.assertTrue(result['suggestions'])
 if __name__=='__main__':unittest.main()

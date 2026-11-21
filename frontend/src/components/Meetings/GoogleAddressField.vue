@@ -17,10 +17,11 @@
       </div>
     </template>
     <template v-else>
-      <FormControl v-model="model" :label="label" :placeholder="__('Enter the full address')" />
+      <FormControl v-model="model" :label="label" :placeholder="__('Full address or latitude, longitude')" />
       <p v-if="status" role="status" class="text-xs text-ink-gray-5">{{ status }}</p>
       <button v-if="browserKey" type="button" class="text-xs text-ink-gray-6 underline underline-offset-2" @click="startSearch">{{ __('Search Google Maps') }}</button>
     </template>
+    <details class="text-xs text-ink-gray-5"><summary class="cursor-pointer">{{ __('Use a map pin for an unlisted address') }}</summary><p class="mt-2">{{ __('Open Google Maps, right-click your location and copy its latitude and longitude. Paste the pair as the address, for example 9.9312, 76.2673.') }}</p><FormControl v-model="model" :label="__('Address or coordinates')" /><a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" class="underline">{{ __('Open Google Maps') }}</a></details>
   </div>
 </template>
 <script setup>

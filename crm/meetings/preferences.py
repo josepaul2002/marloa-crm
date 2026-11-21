@@ -9,7 +9,7 @@ def read_preferences(user):
     name = frappe.db.get_value('CRM Meeting Preferences', {'user':user}, 'name')
     if not name: return default_preferences(), ''
     doc = frappe.get_doc('CRM Meeting Preferences',name)
-    return json.loads(doc.preferences), str(doc.modified)
+    return {**default_preferences(), **json.loads(doc.preferences)}, str(doc.modified)
 
 
 @frappe.whitelist()
@@ -52,7 +52,7 @@ def directory(deal):
     for user in frappe.get_all('User',filters={'enabled':1,'user_type':'System User','name':['not in',['Administrator','Guest']]},fields=['name','full_name','email'],limit_page_length=500):
         if not set(frappe.get_roles(user.name)) & {'Sales User','Sales Manager','System Manager'}:continue
         prefs,_=read_preferences(user.name)
-        people.append({'buffer_minutes':prefs['buffer_minutes'],'travel_mode':prefs['travel_mode'],'user':user.name,'name':user.full_name or user.name,'email':user.email or user.name,'suggested':user.name in assigned})
+        people.append({'timezone':prefs['timezone'], 'daily_limit':prefs.get('max_in_person_per_day'), 'buffer_minutes':prefs['buffer_minutes'],'travel_mode':prefs['travel_mode'],'user':user.name,'name':user.full_name or user.name,'email':user.email or user.name,'suggested':user.name in assigned})
     people.sort(key=lambda p:(not p['suggested'],p['name'] or p['user']))
     own, _ = read_preferences(frappe.session.user)
     return {'me':frappe.session.user,'people':people,'own_places':own['places'],'default_place':own['default_place'],

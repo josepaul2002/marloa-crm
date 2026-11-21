@@ -53,7 +53,9 @@ def scheduling_context(deal, meeting=None):
         target_calendar,_=event_reference(target)
         if is_manager() and target_calendar and target_calendar not in [c.name for c in calendars]:
             calendars.append(frappe._dict(name=target_calendar))
-    result={'can_override':is_manager(),'calendars':calendars,'meeting':None,'event':None,'places_browser_key':frappe.db.get_single_value('Google Settings','custom_marloa_places_browser_key')}
+    from crm.meetings.preferences import read_preferences
+    preferences,_=read_preferences(frappe.session.user)
+    result={'timezone':preferences['timezone'],'can_override':is_manager(),'calendars':calendars,'meeting':None,'event':None,'places_browser_key':frappe.db.get_single_value('Google Settings','custom_marloa_places_browser_key')}
     if meeting:
         doc=frappe.get_doc('Marloa Meeting',meeting);doc.check_permission('write')
         if doc.crm_deal!=deal:frappe.throw('Meeting belongs to another deal.')
@@ -127,6 +129,9 @@ def _save_invitation(deal,data,request_id,meeting,etag):
                     'location_or_link':body['location'] or 'Google Meet link pending','source_kind':'None',
                     'custom_google_request_key':request_key,'invitation_state':'Draft'})
         doc.insert()
+    doc.meeting_at=local_datetime(body['start'].get('dateTime') or body['start'].get('date'))
+    doc.ends_at=local_datetime(body['end'].get('dateTime') or body['end'].get('date'))
+    doc.mode=data.get('mode') or 'Online'
     doc.custom_marloa_scheduling_summary=json.dumps([{k:r.get(k) for k in ('user','required','travel_mode','buffer_minutes')} for r in data['internal_attendees']])
     doc.custom_google_calendar=name
     if not event_id:event_id=hashlib.sha256(('marloa-meeting:'+doc.name).encode()).hexdigest()
