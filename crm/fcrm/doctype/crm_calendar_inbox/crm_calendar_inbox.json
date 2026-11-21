@@ -1,0 +1,105 @@
+{
+ "doctype": "DocType",
+ "name": "CRM Calendar Inbox",
+ "module": "FCRM",
+ "autoname": "hash",
+ "field_order": [
+  "google_key",
+  "calendar",
+  "event_id",
+  "etag",
+  "title",
+  "starts_at",
+  "state",
+  "deal",
+  "meeting",
+  "event_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "google_key",
+   "fieldtype": "Data",
+   "label": "Google event key",
+   "unique": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "calendar",
+   "fieldtype": "Link",
+   "label": "Google Calendar",
+   "options": "Google Calendar"
+  },
+  {
+   "fieldname": "event_id",
+   "fieldtype": "Data",
+   "label": "Event ID"
+  },
+  {
+   "fieldname": "etag",
+   "fieldtype": "Data",
+   "label": "Google revision"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Meeting title",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "starts_at",
+   "fieldtype": "Datetime",
+   "label": "Starts at"
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Select",
+   "label": "State",
+   "options": "Needs linking\nLinked\nIgnored\nCancelled",
+   "default": "Needs linking",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "deal",
+   "fieldtype": "Link",
+   "label": "Deal",
+   "options": "CRM Deal"
+  },
+  {
+   "fieldname": "meeting",
+   "fieldtype": "Data",
+   "label": "Meeting"
+  },
+  {
+   "fieldname": "event_data",
+   "fieldtype": "Long Text",
+   "label": "Event data",
+   "hidden": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "if_owner": 1,
+   "create": 1
+  },
+  {
+   "role": "Sales Manager",
+   "read": 1,
+   "write": 1,
+   "if_owner": 1,
+   "create": 1
+  },
+  {
+   "role": "Sales User",
+   "read": 1,
+   "write": 1,
+   "if_owner": 1,
+   "create": 1
+  }
+ ],
+ "sort_field": "starts_at",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
