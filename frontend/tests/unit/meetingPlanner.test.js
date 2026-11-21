@@ -32,4 +32,15 @@ describe('meeting planning', () => {
   check.click(); await flush(); expect(host.textContent).toContain('No confirmed common time')
   data.location='Another office'; await nextTick(); expect(host.textContent).not.toContain('No confirmed common time')
  })
+ it('explains a capped visit and renders travel without allowing the slot', async () => {
+  const slot={start:'2030-01-01T09:00:00+05:30',end:'2030-01-01T09:30:00+05:30',available:false,people:[{user:'me@work.in',required:true,status:'daily_limit'}],travel:[{user:'me@work.in',before:45,after:0,buffer:15,unknown:false}]}
+  call.mockImplementation(async method=>method.endsWith('directory') ? directory : {people:[{user:'me@work.in',name:'Me',timezone:'Asia/Kolkata',configured:true,travel_minutes:45,buffer_minutes:15}],slots:[slot],suggestions:[]})
+  await mount(reactive({start:'2030-01-01 09:00:00',timezone:'Asia/Kolkata',mode:'In person',location:'Office',internal_attendees:[]}))
+  ;[...host.querySelectorAll('button')].find(b=>b.textContent.includes('Check availability')).click();await flush()
+  host.querySelector('button[aria-label*="Daily visit limit"]').click();await nextTick()
+  expect(host.textContent).toContain('90 minutes total')
+  expect(host.querySelector('[aria-label="Travel and meeting timeline"]')).not.toBeNull()
+  expect([...host.querySelectorAll('button')].find(b=>b.textContent.includes('Use this time')).disabled).toBe(true)
+ })
+
 })
