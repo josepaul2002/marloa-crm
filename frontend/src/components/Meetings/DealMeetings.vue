@@ -4,12 +4,12 @@
       <h2 class="text-xl font-semibold text-ink-gray-9">{{ __('Meetings') }}</h2>
       <div class="flex gap-2">
         <Button :label="__('Record past meeting')" @click="run('_marloaEditMeeting')" />
-        <Button variant="solid" icon-left="plus" :label="__('Schedule meeting')" @click="scheduleName = null; scheduling = true" />
+        <Button variant="solid" icon-left="lucide-plus" :label="__('Schedule meeting')" @click="scheduleName = null; scheduling = true" />
       </div>
     </div>
     <div class="flex gap-2">
       <Button v-for="option in ['Upcoming', 'Past', 'All']" :key="option" :variant="filter === option ? 'subtle' : 'ghost'" :label="__(option)" @click="filter = option" />
-      <Button icon="refresh-cw" :tooltip="__('Refresh meetings')" :loading="meetings.loading" @click="meetings.reload()" />
+      <Button icon="lucide-refresh-cw" :tooltip="__('Refresh meetings')" :loading="meetings.loading" @click="error = ''; meetings.reload()" />
     </div>
     <div v-if="inbox.data?.length" class="rounded-lg border border-outline-gray-2 p-4">
       <h3 class="font-medium text-ink-gray-9">{{ __('Meetings needing a deal') }}</h3>
@@ -38,7 +38,7 @@
           <p v-if="meeting.invitation_state === 'Needs review'" class="mt-2 text-sm text-ink-orange-5">{{ __('Google has not confirmed this invitation. Reopen it to check before retrying.') }}</p>
           <p v-if="meeting.response_summary" class="mt-1 text-sm text-ink-gray-6">{{ meeting.response_summary }}</p>
           <div class="mt-3 flex flex-wrap gap-2">
-            <Button v-if="safeMeetingLink(meeting.location_or_link) && meeting.status !== 'Cancelled'" :label="__('Open meeting')" icon-left="external-link" @click="openLink(meeting.location_or_link)" />
+            <Button v-if="safeMeetingLink(meeting.location_or_link) && meeting.status !== 'Cancelled'" :label="__('Open meeting')" icon-left="lucide-external-link" @click="openLink(meeting.location_or_link)" />
             <Button :label="__('View details')" @click="selected = selected === meeting.name ? null : meeting.name" />
             <Button v-if="(meeting.calendar_event || meeting.custom_google_event_id) && meeting.status !== 'Cancelled'" :label="__('Edit invitation')" @click="scheduleName = meeting.name; scheduling = true" />
             <Button v-if="(meeting.calendar_event || meeting.custom_google_event_id) && meeting.status !== 'Cancelled'" :label="__('Cancel meeting')" @click="cancel(meeting)" />

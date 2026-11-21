@@ -1,6 +1,6 @@
 <template>
-  <Dialog v-model="show" :options="{ title: meeting ? __('Edit meeting invitation') : __('Schedule meeting'), size: '3xl' }">
-    <template #body-content>
+  <Dialog v-model:open="show" :title="meeting ? __('Edit meeting invitation') : __('Schedule meeting')" size="3xl">
+    <template #default>
       <div v-if="loading" class="text-ink-gray-5">{{ __('Loading calendar…') }}</div>
       <form v-else class="space-y-4" @submit.prevent="save">
         <FormControl v-model="data.title" :label="__('Meeting title')" required />

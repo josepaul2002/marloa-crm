@@ -51,10 +51,10 @@
           v-if="activeTab === 'meetings'"
           :key="dealId"
           :deal="dealId"
-          :trigger="(method, name) => doc.trigger(method, name)"
+          :trigger="runMeetingAction"
         />
         <Activities
-          v-show="activeTab !== 'meetings'"
+          v-else
           ref="activities"
           v-model:reload="reload"
           v-model:activeTab="activeTab"
@@ -443,6 +443,7 @@ const errorMessage = ref('')
 const showDeleteLinkedDocModal = ref(false)
 
 const {
+  getControllers,
   triggerOnChange,
   triggerOnRender,
   assignees,
@@ -455,6 +456,12 @@ const {
 const canDelete = computed(() => permissions.data?.permissions?.delete || false)
 
 const doc = computed(() => document.doc || {})
+
+async function runMeetingAction(method, name) {
+  const controllers = getControllers().filter(c => typeof c[method] === 'function')
+  if (!controllers.length) throw new Error(__('Meeting form is not available. Refresh and try again.'))
+  for (const controller of controllers) await controller[method](name)
+}
 
 useUnsavedChangesWarning(() => document.isDirty)
 
