@@ -17,7 +17,7 @@ def get_preferences():
     require_crm()
     data, revision = read_preferences(frappe.session.user)
     from crm.meetings.permissions import is_manager
-    return {'preferences':data,'revision':revision,'places':shared_places(),'can_manage_places':is_manager()}
+    return {'preferences':data,'revision':revision,'places':shared_places(),'can_manage_places':is_manager(),'places_browser_key':frappe.db.get_single_value('Google Settings','custom_marloa_places_browser_key')}
 
 
 @frappe.whitelist()
@@ -36,7 +36,7 @@ def save_preferences(preferences, revision=''):
         doc.user=user;doc.owner=user;doc.preferences=json.dumps(data)
         doc.save(ignore_permissions=True)  # Fixed to the current employee, never a caller-supplied owner.
     from crm.meetings.permissions import is_manager
-    return {'preferences':data,'revision':str(doc.modified),'places':shared_places(),'can_manage_places':is_manager()}
+    return {'preferences':data,'revision':str(doc.modified),'places':shared_places(),'can_manage_places':is_manager(),'places_browser_key':frappe.db.get_single_value('Google Settings','custom_marloa_places_browser_key')}
 
 
 def shared_places():

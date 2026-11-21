@@ -36,7 +36,7 @@
           <p class="text-sm text-ink-gray-5">{{ __('These addresses are private. They are never included in customer invitations.') }}</p>
           <div v-for="(place, i) in preferences.places" :key="place.id" class="space-y-3 rounded-lg border border-outline-gray-2 p-3">
             <FormControl v-model="place.label" :label="__('Place name')" :placeholder="__('Home, office, or another place')" />
-            <FormControl v-model="place.address" type="textarea" :label="__('Full address')" />
+            <GoogleAddressField v-model="place.address" :browser-key="browserKey" :label="__('Address')" />
             <Button :label="__('Remove place')" @click="removePlace(i)" />
           </div>
           <Button icon-left="lucide-plus" :label="__('Add private place')" @click="addPlace" />
@@ -62,17 +62,18 @@
   </SettingsLayoutBase>
 </template>
 <script setup>
+import GoogleAddressField from './GoogleAddressField.vue'
 import { ref, onMounted } from 'vue'
 import { Button, FormControl, DatePicker, TimePicker, call } from 'frappe-ui'
 import SettingsLayoutBase from '@/components/Layouts/SettingsLayoutBase.vue'
-const canManagePlaces = ref(false)
+const canManagePlaces = ref(false), browserKey = ref('')
 const preferences = ref(null), revision = ref(''), sharedPlaces = ref([]), mode = ref('Online')
 const loading = ref(true), saving = ref(false), error = ref(''), saved = ref(false), calendars = ref([]), calendarLoading = ref(false), calendarError = ref('')
 const modes = ['Online', 'In person'], days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 const timezones = [...new Set(['Asia/Kolkata', 'Australia/Sydney', ...(Intl.supportedValuesOf?.('timeZone') || [])])]
 const travelModes = [{ label: __('Driving'), value: 'DRIVE' }, { label: __('Two-wheeler'), value: 'TWO_WHEELER' }, { label: __('Walking'), value: 'WALK' }, { label: __('Public transport'), value: 'TRANSIT' }, { label: __('Cycling'), value: 'BICYCLE' }]
 function managePlaces() { window.open('/desk/crm-meeting-place', '_blank', 'noopener,noreferrer') }
-function apply(r) { canManagePlaces.value = Boolean(r.can_manage_places); preferences.value = r.preferences; revision.value = r.revision; sharedPlaces.value = r.places || [] }
+function apply(r) { browserKey.value = r.places_browser_key || ''; canManagePlaces.value = Boolean(r.can_manage_places); preferences.value = r.preferences; revision.value = r.revision; sharedPlaces.value = r.places || [] }
 onMounted(async () => { try { apply(await call('crm.meetings.preferences.get_preferences')) } catch(e) { error.value = e.message } finally { loading.value = false } })
 function addPlace() { preferences.value.places.push({ id: crypto.randomUUID(), label: '', address: '' }) }
 function copyHours() { preferences.value.weekly['In person'] = JSON.parse(JSON.stringify(preferences.value.weekly.Online)) }
