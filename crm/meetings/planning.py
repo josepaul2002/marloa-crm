@@ -48,6 +48,7 @@ def parse_request(data):
 
 def origin_for(row, preferences):
     source=row.get('origin_source','default')
+    if source not in ('manual','shared','personal','default'):return ''
     if source=='manual':return str(row.get('origin_address') or '').strip()[:500]
     if source=='shared':
         return frappe.db.get_value('CRM Meeting Place',{'name':row.get('origin_id'),'enabled':1},'address') or ''

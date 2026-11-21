@@ -24,6 +24,9 @@ class PlanningGuards(unittest.TestCase):
   m,f,p,_=self.load();row={'user':'employee@work.in','origin_source':'default'}
   self.assertEqual(m.origin_for(row,p),'')
   p['share_travel_estimate']=True;self.assertEqual(m.origin_for(row,p),'PRIVATE ADDRESS')
+ def test_unknown_source_cannot_bypass_private_origin_opt_in(self):
+  m,_,p,_=self.load()
+  self.assertEqual(m.origin_for({'user':'other@work.in','origin_source':'unknown'},p),'')
  def test_other_person_cannot_select_private_place_by_id(self):
   m,_,p,_=self.load();p['share_travel_estimate']=True
   self.assertEqual(m.origin_for({'user':'other@work.in','origin_source':'personal','origin_id':'home'},p),'')
