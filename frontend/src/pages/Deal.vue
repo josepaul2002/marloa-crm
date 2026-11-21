@@ -52,6 +52,7 @@
           :key="dealId"
           :deal="dealId"
           :trigger="runMeetingAction"
+          :can-create="Boolean(permissions.data?.permissions?.write)"
         />
         <Activities
           v-else

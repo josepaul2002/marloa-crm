@@ -49,8 +49,8 @@ def search_guests(query, deal=None):
                 seen.add(email)
     suggestions.sort(key=lambda r:r['source']!='Deal contact')
     app=contacts_app()
-    status='not_connected'
-    if app and app.get_token_cache(frappe.session.user):
+    status=connection_status()['status']
+    if app and status == 'connected':
         try:
             oauth=app.get_oauth2_session(frappe.session.user)
             status='connected'
@@ -59,7 +59,7 @@ def search_guests(query, deal=None):
                 # Google requires a warmup search to refresh its search cache.
                 warm=oauth.get(url,params={'query':'','readMask':'names,emailAddresses','pageSize':1},timeout=10)
                 if warm.status_code in (401,403):
-                    status='permission_required';continue
+                    status=google_error_status(warm);continue
                 warm.raise_for_status()
                 response=oauth.get(url,params={'query':query,'readMask':'names,emailAddresses','pageSize':10},timeout=10)
                 response.raise_for_status()
@@ -70,8 +70,8 @@ def search_guests(query, deal=None):
                         email=address.get('value','').lower()
                         if email and email not in seen:
                             suggestions.append({'name':names[0].get('displayName') or email,'email':email,'source':source});seen.add(email)
-        except Exception:
-            status='unavailable'
+        except Exception as error:
+            status='reconnect' if type(error).__name__ in ('TokenExpiredError','InvalidGrantError') else 'unavailable'
     return {'suggestions':suggestions[:30],'google_status':status}
 
 
@@ -94,3 +94,35 @@ def configure_contacts_app():
             'query_parameters':[{'key':'access_type','value':'offline'},{'key':'prompt','value':'consent'}]}).insert()
     return {'app':app.name,'redirect_uri':app.redirect_uri,
             'people_api_url':'https://console.cloud.google.com/apis/library/people.googleapis.com'}
+
+
+def google_error_status(response):
+    if response.status_code == 401: return 'reconnect'
+    if response.status_code == 403:
+        try:
+            error = response.json().get('error', {})
+            if 'ACCESS_TOKEN_SCOPE_INSUFFICIENT' in str(error) or 'insufficientPermissions' in str(error): return 'reconnect'
+        except Exception: pass
+        return 'api_unavailable'
+    return 'unavailable'
+
+
+@frappe.whitelist()
+def connection_status():
+    require_crm()
+    app = contacts_app()
+    token = app.get_token_cache(frappe.session.user) if app else None
+    if not token or not token.get_password('access_token', raise_exception=False):
+        return {'status':'not_connected'}
+    cache_key = 'marloa-contacts-status:' + frappe.session.user
+    cached = frappe.cache.get_value(cache_key)
+    if cached: return {'status':cached}
+    try:
+        oauth = app.get_oauth2_session(frappe.session.user)
+        response = oauth.get('https://people.googleapis.com/v1/people:searchContacts',
+            params={'query':'','readMask':'names,emailAddresses','pageSize':1},timeout=10)
+        status = 'connected' if response.ok else google_error_status(response)
+    except Exception as error:
+        status = 'reconnect' if type(error).__name__ in ('TokenExpiredError','InvalidGrantError') else 'unavailable'
+    frappe.cache.set_value(cache_key,status,expires_in_sec=45)
+    return {'status':status}
