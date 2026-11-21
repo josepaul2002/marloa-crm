@@ -1,0 +1,54 @@
+{
+ "doctype": "DocType",
+ "name": "CRM Meeting Preferences",
+ "module": "FCRM",
+ "autoname": "hash",
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "reqd": true,
+   "options": "User",
+   "unique": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "preferences",
+   "fieldtype": "Long Text",
+   "label": "Preferences",
+   "reqd": true
+  }
+ ],
+ "field_order": [
+  "user",
+  "preferences"
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 0,
+   "if_owner": 1
+  },
+  {
+   "role": "Sales Manager",
+   "read": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 0,
+   "if_owner": 1
+  },
+  {
+   "role": "Sales User",
+   "read": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 0,
+   "if_owner": 1
+  }
+ ],
+ "track_changes": 0
+}

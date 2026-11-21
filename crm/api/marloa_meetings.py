@@ -22,7 +22,12 @@ def list_meetings(deal):
         if options.get('recurringEventId'):
             series_ids.add(options['recurringEventId'])
     meetings = [m for m in meetings if m.get('custom_google_event_id') not in series_ids]
+    from crm.meetings.permissions import is_manager
+    manager=is_manager()
     for meeting in meetings:
+        doc=frappe.get_doc('Marloa Meeting',meeting.name)
+        meeting['can_edit_notes']=doc.has_permission('write')
+        meeting['can_edit_invitation']=meeting['can_edit_notes'] and (manager or meeting.meeting_owner==frappe.session.user)
         responses = json.loads(meeting.get("custom_google_guest_responses") or "[]")
         counts = Counter(a.get("responseStatus", "needsAction") for a in responses if not a.get("organizer"))
         labels = {"accepted":"accepted", "declined":"declined", "tentative":"tentative", "needsAction":"awaiting response"}

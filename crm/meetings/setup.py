@@ -4,7 +4,7 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 def setup():
-    fields = {'Google Settings':[{'fieldname':'custom_marloa_places_browser_key','label':'Restricted Places browser key (sent to browsers)','fieldtype':'Data','hidden':1}], 'Google Calendar':[
+    fields = {'Google Settings':[{'fieldname':'custom_marloa_routes_server_key','label':'Routes API server key','fieldtype':'Password','description':'Server key restricted to Routes API. Do not use the browser Places key.'},{'fieldname':'custom_marloa_places_browser_key','label':'Restricted Places browser key (sent to browsers)','fieldtype':'Data','hidden':1}], 'Google Calendar':[
         {'fieldname':'custom_marloa_customer_calendar','label':'Dedicated customer meetings calendar confirmed','fieldtype':'Check','default':'0'},
         {'fieldname':'custom_marloa_sync_enabled','label':'Sync customer meetings into CRM','fieldtype':'Check','default':'0'},
         {'fieldname':'custom_marloa_sync_token','label':'CRM calendar sync token','fieldtype':'Password','hidden':1},
@@ -12,6 +12,7 @@ def setup():
     ]}
     if frappe.db.exists('DocType','Marloa Meeting'):
         fields['Marloa Meeting']=[
+            {'fieldname':'custom_marloa_scheduling_summary','label':'Internal attendees','fieldtype':'Long Text','hidden':1},
             {'fieldname':'custom_google_calendar','label':'Organizer calendar','fieldtype':'Link','options':'Google Calendar','read_only':1},
             {'fieldname':'custom_google_event_id','label':'Google event ID','fieldtype':'Data','read_only':1},
             {'fieldname':'custom_google_etag','label':'Google revision','fieldtype':'Data','hidden':1},

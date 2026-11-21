@@ -52,7 +52,7 @@ import AppsIcon from '@/components/Icons/AppsIcon.vue'
 import { sessionStore } from '@/stores/session'
 import { usersStore } from '@/stores/users'
 import { getSettings } from '@/stores/settings'
-import { showSettings, isMobileView } from '@/composables/settings'
+import { showSettings, activeSettingsPage, isMobileView } from '@/composables/settings'
 import { showAboutModal } from '@/composables/modals'
 import { confirmLoginToFrappeCloud } from '@/composables/frappecloud'
 import { useCloudSettings } from '@/composables/cloudSettings'
@@ -107,6 +107,7 @@ const dropdownItems = computed(() => {
     }
   })
 
+  _dropdownItems[0].options.unshift({ label: __('My availability'), icon: spriteIcon('calendar'), onClick: () => { activeSettingsPage.value = 'My availability'; showSettings.value = true } })
   return _dropdownItems
 })
 

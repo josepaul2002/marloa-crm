@@ -68,6 +68,8 @@ import SettingsIcon2 from '@/components/Icons/SettingsIcon2.vue'
 import Users from '@/components/Settings/Users.vue'
 import Hierarchy from '@/components/Settings/Hierarchy/Hierarchy.vue'
 import InviteUserPage from '@/components/Settings/InviteUserPage.vue'
+import MyAvailability from '@/components/Meetings/MyAvailability.vue'
+import CalendarIcon from '@/components/Icons/CalendarIcon.vue'
 import ProfilePage from '@/components/Settings/Profile/ProfilePage.vue'
 import PreferencesSettings from '@/components/Settings/PreferencesSettings.vue'
 import WhatsAppSettings from '@/components/Settings/WhatsAppSettings.vue'
@@ -117,6 +119,11 @@ const tabs = computed(() => {
               image: user.value.user_image,
             }),
           component: markRaw(ProfilePage),
+        },
+        {
+          label: __('My availability'),
+          icon: CalendarIcon,
+          component: markRaw(MyAvailability),
         },
         {
           label: __('Preferences'),

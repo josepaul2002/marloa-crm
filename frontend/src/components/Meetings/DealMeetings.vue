@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-5 px-5 py-5 sm:px-10">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h2 class="text-xl font-semibold text-ink-gray-9">{{ __('Meetings') }}</h2>
-      <div class="flex gap-2">
+      <div v-if="canCreate" class="flex gap-2">
         <Button :label="__('Record past meeting')" @click="run('_marloaEditMeeting')" />
         <Button variant="solid" icon-left="lucide-plus" :label="__('Schedule meeting')" @click="scheduleName = null; scheduling = true" />
       </div>
@@ -40,8 +40,8 @@
           <div class="mt-3 flex flex-wrap gap-2">
             <Button v-if="safeMeetingLink(meeting.location_or_link) && meeting.status !== 'Cancelled'" :label="__('Open meeting')" icon-left="lucide-external-link" @click="openLink(meeting.location_or_link)" />
             <Button :label="__('View details')" @click="selected = selected === meeting.name ? null : meeting.name" />
-            <Button v-if="(meeting.calendar_event || meeting.custom_google_event_id) && meeting.status !== 'Cancelled'" :label="__('Edit invitation')" @click="scheduleName = meeting.name; scheduling = true" />
-            <Button v-if="(meeting.calendar_event || meeting.custom_google_event_id) && meeting.status !== 'Cancelled'" :label="__('Cancel meeting')" @click="cancel(meeting)" />
+            <Button v-if="meeting.can_edit_invitation && (meeting.calendar_event || meeting.custom_google_event_id) && meeting.status !== 'Cancelled'" :label="__('Edit invitation')" @click="scheduleName = meeting.name; scheduling = true" />
+            <Button v-if="meeting.can_edit_invitation && (meeting.calendar_event || meeting.custom_google_event_id) && meeting.status !== 'Cancelled'" :label="__('Cancel meeting')" @click="cancel(meeting)" />
           </div>
           <div v-if="selected === meeting.name" class="mt-4 space-y-4 border-t border-outline-gray-2 pt-4">
             <div v-for="field in detailFields" :key="field[0]">
@@ -50,7 +50,7 @@
                 <p class="mt-1 whitespace-pre-wrap break-words text-sm text-ink-gray-6">{{ meeting[field[0]] }}</p>
               </template>
             </div>
-            <Button :label="__('Edit internal notes')" @click="run('_marloaEditMeeting', meeting.name)" />
+            <Button v-if="meeting.can_edit_notes" :label="__('Edit internal notes')" @click="run('_marloaEditMeeting', meeting.name)" />
           </div>
         </div>
       </div>
@@ -66,7 +66,7 @@ import { renderFieldLayoutDialog } from '@/utils/renderFieldLayoutDialog'
 import { call } from 'frappe-ui'
 import CalendarIcon from '@/components/Icons/CalendarIcon.vue'
 import { meetingIsPast, safeMeetingLink } from '@/utils/meetingWorkspace'
-const props = defineProps({ deal: { type: String, required: true }, trigger: { type: Function, required: true } })
+const props = defineProps({ deal: { type: String, required: true }, trigger: { type: Function, required: true }, canCreate: { type: Boolean, default: false } })
 const scheduling = ref(false), scheduleName = ref(null)
 const filter = ref('Upcoming')
 const selected = ref(null)

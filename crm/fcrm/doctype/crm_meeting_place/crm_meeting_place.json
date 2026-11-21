@@ -1,0 +1,53 @@
+{
+ "doctype": "DocType",
+ "name": "CRM Meeting Place",
+ "module": "FCRM",
+ "autoname": "hash",
+ "fields": [
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "label": "Place name",
+   "reqd": true
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Small Text",
+   "label": "Address",
+   "reqd": true
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "reqd": false,
+   "default": "1"
+  }
+ ],
+ "field_order": [
+  "label",
+  "address",
+  "enabled"
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "create": 1,
+   "write": 1
+  },
+  {
+   "role": "Sales Manager",
+   "read": 1,
+   "create": 1,
+   "write": 1
+  },
+  {
+   "role": "Sales User",
+   "read": 1,
+   "create": 0,
+   "write": 0
+  }
+ ],
+ "track_changes": 1
+}
