@@ -8,10 +8,9 @@
     <div v-for="row in data.internal_attendees" :key="row.user" class="space-y-3 rounded-lg bg-surface-gray-2 p-3">
       <div class="flex flex-wrap items-center justify-between gap-3"><span class="text-sm font-medium text-ink-gray-9">{{ employee(row.user)?.name || row.user }}</span><FormControl :model-value="!row.required" type="checkbox" :label="__('Optional attendee')" @update:model-value="v => row.required = !v" /></div>
       <template v-if="data.mode === 'In person'">
-        <FormControl v-model="row.origin_source" type="select" :options="originOptions(row)" :label="__('Travelling from')" />
-        <FormControl v-if="row.origin_source === 'manual'" v-model="row.origin_address" :label="__('Departure address')" :placeholder="__('Enter a complete address')" />
-        <FormControl v-if="row.origin_source === 'personal'" v-model="row.origin_id" type="select" :options="directory.own_places.map(p => ({ label: p.label, value: p.id }))" :label="__('My saved place')" />
-        <FormControl v-if="row.origin_source === 'shared'" v-model="row.origin_id" type="select" :options="directory.shared_places.map(p => ({ label: p.label, value: p.name }))" :label="__('Company place')" />
+        <FormControl :model-value="originChoice(row)" type="select" :options="originOptions(row)" :label="__('Travelling from')" @update:model-value="value => setOrigin(row, value)" />
+        <GoogleAddressField v-if="row.origin_source === 'manual'" v-model="row.origin_address" :browser-key="browserKey" :label="__('Departure address')" />
+        <Button v-if="row.user === directory.me" variant="ghost" icon-left="lucide-map-pin" :label="__('Add or edit my saved places')" @click="openPreferences" />
         <div class="grid gap-3 sm:grid-cols-2"><FormControl v-model="row.travel_mode" type="select" :options="travelModes" :label="__('Travel mode')" /><FormControl v-model="row.buffer_minutes" type="number" :label="__('Arrival buffer (minutes)')" min="0" max="180" /></div>
         <FormControl v-model="row.manual_minutes" type="number" :label="__('Manual travel estimate (minutes, optional)')" min="0" max="1440" :placeholder="__('Leave empty to use Google Maps')" />
         <p class="text-xs text-ink-gray-5">{{ __('A colleague’s saved departure address stays private. They must allow travel calculations in My availability, or you can specify an agreed departure place.') }}</p>
@@ -45,9 +44,10 @@
   </section>
 </template>
 <script setup>
+import GoogleAddressField from './GoogleAddressField.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Button, FormControl, DatePicker, call } from 'frappe-ui'
-const props = defineProps({ data: { type: Object, required: true }, deal: String, meeting: String })
+const props = defineProps({ data: { type: Object, required: true }, deal: String, meeting: String, browserKey: String })
 const emit = defineEmits(['selected', 'preferences'])
 const directory = ref({ people: [], own_places: [], shared_places: [] }), from = ref(''), to = ref(''), duration = ref(30), result = ref(null), loading = ref(false), error = ref(''), page = ref(0)
 let generation = 0, disposed = false
@@ -71,12 +71,17 @@ function toggle(person) {
   if (index >= 0) rows.splice(index,1)
   else rows.push({ user: person.user, required: true, origin_source: 'default', origin_id: '', origin_address: '', travel_mode: person.travel_mode || 'DRIVE', buffer_minutes: person.buffer_minutes ?? 15, manual_minutes: '' })
 }
+function originChoice(row) { return ['personal','shared'].includes(row.origin_source) ? row.origin_source+':'+(row.origin_id || '') : (row.origin_source || 'default') }
+function setOrigin(row, value) { const [source, ...id] = value.split(':'); row.origin_source = source; row.origin_id = id.join(':') }
 function originOptions(row) {
-  const options = [{ label: __('Employee’s usual departure point'), value: 'default' }, { label: __('Enter an agreed address'), value: 'manual' }]
-  if (directory.value.shared_places.length) options.push({ label: __('Company place'), value: 'shared' })
-  if (row.user === directory.value.me && directory.value.own_places.length) options.push({ label: __('My saved place'), value: 'personal' })
+  const own = row.user === directory.value.me
+  const usual = own && directory.value.own_places.find(p => p.id === directory.value.default_place)
+  const options = [{ label: usual ? __('Usual departure')+': '+usual.label+' — '+usual.address : __('Employee’s usual departure point'), value: 'default' }, { label: __('Search another departure address'), value: 'manual' }]
+  for (const p of directory.value.shared_places) options.push({ label: p.label+' — '+p.address, value: 'shared:'+p.name })
+  if (own) for (const p of directory.value.own_places) options.push({ label: p.label+' — '+p.address, value: 'personal:'+p.id })
   return options
 }
+
 function openPreferences() { emit('preferences') }
 function format(value) { return new Intl.DateTimeFormat(undefined, { timeZone: props.data.timezone, month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }).format(new Date(value)) }
 function statusLabel(status) { return ({free:__('Free'),busy:__('Busy'),outside_hours:__('Outside hours'),unknown:__('Unknown'),travel_conflict:__('Travel conflict')})[status] }

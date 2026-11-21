@@ -11,9 +11,8 @@
           <component :is="data.all_day ? DatePicker : DateTimePicker" v-model="data.end" :label="data.all_day ? __('Last day') : __('End')" required />
         </div>
         <FormControl v-model="data.timezone" :label="__('Time zone')" placeholder="Asia/Kolkata" />
-        <MeetingLocationSearch v-if="data.mode === 'In person'" :browser-key="placesKey" @select="value => data.location = value" />
-        <FormControl v-if="data.mode === 'In person'" v-model="data.location" :label="__('Physical location')" placeholder="Enter the complete address" />
-        <MeetingPlanner :data="data" :deal="deal" :meeting="meeting" @preferences="openAvailability" />
+        <GoogleAddressField v-if="data.mode === 'In person'" v-model="data.location" :browser-key="placesKey" :label="__('Meeting location')" />
+        <MeetingPlanner :data="data" :deal="deal" :meeting="meeting" :browser-key="placesKey" @preferences="openAvailability" />
         <FormControl v-model="query" :label="__('Find a guest')" :placeholder="__('Type a name or email…')" @input="search" />
         <div v-if="suggestions.length" class="max-h-40 overflow-auto rounded border border-outline-gray-2">
           <button v-for="guest in suggestions" :key="guest.email" type="button" class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-surface-gray-2" @click="addGuest(guest)">
@@ -66,7 +65,7 @@
 <script setup>
 import { activeSettingsPage, showSettings } from '@/composables/settings'
 import MeetingPlanner from './MeetingPlanner.vue'
-import MeetingLocationSearch from './MeetingLocationSearch.vue'
+import GoogleAddressField from './GoogleAddressField.vue'
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { Dialog, Button, FormControl, DatePicker, DateTimePicker, Tooltip, call } from 'frappe-ui'
 const props = defineProps({ deal: String, meeting: String })
