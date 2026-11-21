@@ -1,33 +1,23 @@
 <template>
-  <Dialog v-model:open="dialogOpen" :title="meeting ? __('Edit meeting invitation') : __('Schedule meeting')" size="3xl">
+  <Dialog v-model:open="dialogOpen" :title="meeting ? __('Edit meeting invitation') : __('Schedule meeting')" size="7xl">
     <template #default>
       <div v-if="loading" class="text-ink-gray-5">{{ __('Loading calendar…') }}</div>
       <form v-else class="space-y-4" @submit.prevent="save">
-        <FormControl v-model="data.title" :label="__('Meeting title')" required />
         <div class="grid gap-4 sm:grid-cols-2">
           <FormControl v-model="data.calendar" type="select" :options="calendars" :label="__('Organizer calendar')" :disabled="Boolean(event)" />
           <FormControl v-model="data.mode" type="select" :options="['Online', 'In person']" :label="__('Meeting type')" />
-          <component :is="data.all_day ? DatePicker : DateTimePicker" v-model="data.start" :label="__('Start')" required />
-          <component :is="data.all_day ? DatePicker : DateTimePicker" v-model="data.end" :label="data.all_day ? __('Last day') : __('End')" required />
+          <component :is="data.all_day ? DatePicker : MeetingDateTime" v-model="data.start" :label="__('Start')" required />
+          <component :is="data.all_day ? DatePicker : MeetingDateTime" v-model="data.end" :label="data.all_day ? __('Last day') : __('End')" required />
         </div>
-        <FormControl v-model="data.timezone" :label="__('Time zone')" placeholder="Asia/Kolkata" />
+        <FormControl v-model="data.timezone" type="select" :options="timezones" :label="__('Viewing time zone')" />
         <GoogleAddressField v-if="data.mode === 'In person'" v-model="data.location" :browser-key="placesKey" :label="__('Meeting location')" />
-        <MeetingPlanner :data="data" :deal="deal" :meeting="meeting" :browser-key="placesKey" @preferences="openAvailability" />
+        <MeetingPlanner :data="data" :deal="deal" :meeting="meeting" :browser-key="placesKey" @preferences="openAvailability" @services="value => services = value" />
+        <FormControl v-model="data.title" :placeholder="__('Meeting title')" :label="__('Meeting title')" required />
         <FormControl v-model="query" :label="__('Find a guest')" :placeholder="__('Type a name or email…')" @input="search" />
         <div v-if="suggestions.length" class="max-h-40 overflow-auto rounded border border-outline-gray-2">
           <button v-for="guest in suggestions" :key="guest.email" type="button" class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-surface-gray-2" @click="addGuest(guest)">
             <span class="text-sm text-ink-gray-9">{{ guest.name }} · {{ guest.email }}</span><span class="text-xs text-ink-gray-5">{{ guest.source }}</span>
           </button>
-        </div>
-        <div class="flex items-center justify-between gap-3 text-sm text-ink-gray-5">
-          <Tooltip :text="connectionLabel">
-            <span class="relative inline-flex size-8 items-center justify-center rounded-full bg-surface-gray-2" role="status" :aria-label="connectionLabel">
-              <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true"><path fill="#4285F4" d="M4 3h16v18H4z"/><circle cx="12" cy="9" r="3" fill="white"/><path fill="white" d="M6.5 18c0-3 2-5 5.5-5s5.5 2 5.5 5z"/></svg>
-              <span class="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-surface-elevation-2" :class="connectionState === 'connected' ? 'bg-green-500 motion-safe:animate-pulse' : 'bg-gray-400'" />
-            </span>
-          </Tooltip>
-          <Button v-if="connectionState === 'not_connected' || connectionState === 'reconnect'" :label="connectionState === 'reconnect' ? __('Reconnect Google Contacts') : __('Connect Google Contacts')" @click="connectContacts" />
-          <span v-else-if="['unavailable','api_unavailable'].includes(connectionState)">{{ __('Google Contacts temporarily unavailable. CRM contacts still work.') }}</span>
         </div>
         <FormControl v-model="data.invitees" type="textarea" :label="__('External guest emails (comma separated)')" />
         <FormControl v-model="data.agenda" type="textarea" :label="__('Agenda shared with guests')" />
@@ -57,13 +47,30 @@
         <p v-if="event?.recurringEventId" class="text-sm text-ink-gray-5">{{ __('You are editing this occurrence, not the entire recurring series.') }}</p>
         <p class="text-sm text-ink-gray-5">{{ __('Saving sends an invitation or update to the listed guests. Availability and travel are checked again before sending.') }}</p>
         <p v-if="error" role="alert" class="text-sm text-ink-red-5">{{ error }}</p>
+        <div class="sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-outline-gray-2 bg-surface-elevation-1 py-3">
         <Button type="submit" variant="solid" :label="event ? __('Send update to guests') : __('Send invitation')" :loading="saving" :disabled="!data.calendar || saving || !ready" />
+        <div class="flex justify-end">
+        <div class="flex items-center justify-between gap-3 text-sm text-ink-gray-5">
+          <Tooltip v-for="(state, service) in services" :key="service" :text="(service === 'calendar' ? __('Google Calendar') : __('Google Routes')) + ': ' + state"><span class="relative inline-flex size-7 items-center justify-center rounded bg-surface-gray-2" role="status" :aria-label="service + ': ' + state"><span class="size-4" :class="service === 'calendar' ? 'lucide-calendar' : 'lucide-map-pin'" aria-hidden="true" /><span class="absolute bottom-0 right-0 size-2 rounded-full border border-surface-gray-2" :class="{'bg-green-500':state === 'connected','bg-red-500':state === 'error','bg-gray-400':state === 'unused','bg-blue-500 motion-safe:animate-pulse':state === 'checking'}" /></span></Tooltip>
+          <Tooltip :text="connectionLabel">
+            <span class="relative inline-flex size-8 items-center justify-center rounded-full bg-surface-gray-2" role="status" :aria-label="connectionLabel">
+              <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true"><path fill="#4285F4" d="M4 3h16v18H4z"/><circle cx="12" cy="9" r="3" fill="white"/><path fill="white" d="M6.5 18c0-3 2-5 5.5-5s5.5 2 5.5 5z"/></svg>
+              <span class="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-surface-elevation-2" :class="connectionState === 'connected' ? 'bg-green-500' : ['unavailable','api_unavailable','reconnect'].includes(connectionState) ? 'bg-red-500' : 'bg-gray-400'" />
+            </span>
+          </Tooltip>
+          <Button v-if="connectionState === 'not_connected' || connectionState === 'reconnect'" :label="connectionState === 'reconnect' ? __('Reconnect Google Contacts') : __('Connect Google Contacts')" @click="connectContacts" />
+          <span v-else-if="['unavailable','api_unavailable'].includes(connectionState)">{{ __('Google Contacts temporarily unavailable. CRM contacts still work.') }}</span>
+        </div>
+        </div>
+        </div>
       </form>
     </template>
   </Dialog>
 </template>
 <script setup>
 import { activeSettingsPage, showSettings } from '@/composables/settings'
+import { timezoneOptions, wallTime, instantFromWall } from './timezones'
+import MeetingDateTime from './MeetingDateTime.vue'
 import MeetingPlanner from './MeetingPlanner.vue'
 import GoogleAddressField from './GoogleAddressField.vue'
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
@@ -75,6 +82,8 @@ const preferencesOpen = ref(false)
 const dialogOpen = computed({ get: () => show.value && !preferencesOpen.value, set: value => { if (!preferencesOpen.value) show.value = value } })
 async function openAvailability() { preferencesOpen.value = true; await nextTick(); activeSettingsPage.value = 'My availability'; showSettings.value = true }
 watch(showSettings, value => { if (!value && preferencesOpen.value) preferencesOpen.value = false })
+const timezones = timezoneOptions
+const services = ref({calendar:'unused',routes:'unused'})
 const ready = ref(false)
 const loading = ref(true), saving = ref(false), error = ref(''), event = ref(null), calendars = ref([])
 const suggestions = ref([]), query = ref(''), connectionState = ref('checking'), canOverride = ref(false)
@@ -84,6 +93,10 @@ const placesKey = ref('')
 const requestId = crypto.randomUUID()
 let timer, generation = 0, disposed = false
 const data = reactive({ title: '', calendar: '', mode: 'Online', start: '', end: '', timezone: 'Asia/Kolkata', location: '', invitees: '', optional_invitees: '', agenda: '', all_day: false, repeat: 'NONE', repeat_count: 12, reminder: 10, visibility: 'default', free: false, guests_can_edit: false, guests_can_invite: false, guests_can_see: true, drive_links: '', internal_attendees: [], availability_override_reason: '' })
+watch(() => data.timezone, (zone, previous) => {
+  if (!ready.value || data.all_day || zone === previous) return
+  for (const key of ['start','end']) { const instant = instantFromWall(data[key], previous); if (instant != null) data[key] = wallTime(instant, zone) }
+})
 const repeatOptions = [{ label: __('Does not repeat'), value: 'NONE' }, ...['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].map(value => ({ label: __(value.charAt(0) + value.slice(1).toLowerCase()), value }))]
 const visibilityOptions = [{ label: __('Calendar default'), value: 'default' }, { label: __('Private'), value: 'private' }, { label: __('Public'), value: 'public' }]
 onMounted(async () => {
@@ -92,6 +105,7 @@ onMounted(async () => {
     const context = await call('crm.meetings.scheduling.scheduling_context', { deal: props.deal, meeting: props.meeting })
     placesKey.value = context.places_browser_key || ''
     canOverride.value = Boolean(context.can_override)
+    data.timezone = context.timezone || data.timezone
     data.internal_attendees = (context.internal_attendees || []).map(r => ({ ...r, origin_source: 'default', origin_id: '', origin_address: '', manual_minutes: '' }))
     calendars.value = context.calendars.map(c => c.name)
     data.calendar = context.calendar || calendars.value[0] || ''

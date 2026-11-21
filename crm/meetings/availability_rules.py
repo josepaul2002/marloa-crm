@@ -8,8 +8,8 @@ MODES = ('Online', 'In person')
 def default_preferences():
     return {'timezone': 'Asia/Kolkata', 'configured': False,
             'weekly': {m: [[] for _ in range(7)] for m in MODES},
-            'exceptions': [], 'places': [], 'calendar_ids': [],
-            'buffer_minutes': 15, 'travel_mode': 'DRIVE', 'default_place': '',
+            'exceptions': [], 'places': [], 'calendar_ids': [], 'holiday_calendar_ids': [],
+            'max_in_person_per_day': None, 'buffer_minutes': 15, 'travel_mode': 'DRIVE', 'default_place': '',
             'share_travel_estimate': False}
 
 
@@ -66,11 +66,20 @@ def validate_preferences(data):
     buffer = int(data.get('buffer_minutes', 15))
     if not 0 <= buffer <= 180: raise ValueError('Arrival buffer must be between 0 and 180 minutes.')
     result['buffer_minutes'] = buffer
+    limit = data.get('max_in_person_per_day')
+    if limit is not None and limit != '':
+        if isinstance(limit, bool) or not str(limit).isdigit() or not 0 <= int(limit) <= 100:
+            raise ValueError('Daily in-person meeting limit must be a whole number between 0 and 100, or blank for unlimited.')
+        result['max_in_person_per_day'] = int(limit)
     result['share_travel_estimate'] = bool(data.get('share_travel_estimate'))
     ids = data.get('calendar_ids', [])
     if not isinstance(ids, list) or len(ids) > 10 or any(not isinstance(v,str) or not v or len(v)>254 for v in ids):
         raise ValueError('Choose up to ten calendars.')
     result['calendar_ids'] = list(dict.fromkeys(ids))
+    holidays = data.get('holiday_calendar_ids', [])
+    if not isinstance(holidays, list) or len(holidays)>10 or any(not isinstance(v,str) or not v or len(v)>254 for v in holidays):
+        raise ValueError('Choose up to ten holiday calendars.')
+    result['holiday_calendar_ids'] = list(dict.fromkeys(holidays))
     result['configured'] = True
     return result
 
@@ -105,14 +114,41 @@ def overlaps(start, end, periods):
 
 def candidate_status(person, start, end, mode):
     if person.get('calendar_error') or not person['preferences'].get('configured'): return 'unknown'
+    if mode == 'In person':
+        limit = person['preferences'].get('max_in_person_per_day')
+        day = start.astimezone(ZoneInfo(person['preferences']['timezone'])).date().isoformat()
+        if limit is not None and person.get('daily_counts', {}).get(day, 0) >= limit:
+            return 'daily_limit'
     if not working_window(person['preferences'], start, end, mode): return 'outside_hours'
+    if overlaps(start, end, person.get('holidays', [])): return 'holiday'
     if overlaps(start, end, person['busy']): return 'busy'
     if mode == 'In person':
-        if person.get('travel_minutes') is None: return 'unknown'
-        depart = start - timedelta(minutes=person['travel_minutes'] + person['buffer'])
+        travel = travel_window(person, start, end)
+        if travel['unknown']: return 'unknown'
+        if travel['conflict']: return 'travel_conflict'
+        depart = start - timedelta(minutes=travel['before'] + person['buffer'])
         if not working_window(person['preferences'], depart, end, mode): return 'travel_conflict'
         if overlaps(depart, start, person['busy']): return 'travel_conflict'
     return 'free'
+
+
+def travel_window(person, start, end):
+    before = person.get('travel_minutes')
+    after = 0
+    previous = [e for e in person.get('journeys', []) if e['end'] <= start and e['end'].astimezone(ZoneInfo(person['preferences']['timezone'])).date() == start.astimezone(ZoneInfo(person['preferences']['timezone'])).date()]
+    following = [e for e in person.get('journeys', []) if e['start'] >= end and e['start'].astimezone(ZoneInfo(person['preferences']['timezone'])).date() == end.astimezone(ZoneInfo(person['preferences']['timezone'])).date()]
+    prev = max(previous, key=lambda e:e['end'], default=None)
+    nxt = min(following, key=lambda e:e['start'], default=None)
+    if prev is not None: before = prev.get('from_minutes')
+    if nxt is not None: after = nxt.get('to_minutes')
+    unknown = before is None or after is None or bool(person.get('journey_error'))
+    conflict = False
+    if not unknown:
+        depart = start - timedelta(minutes=before + person['buffer'])
+        arrival = end + timedelta(minutes=after + (person['buffer'] if after else 0))
+        conflict = bool(prev and depart < prev['end']) or bool(nxt and arrival > nxt['start'])
+        if after and (overlaps(end, arrival, person['busy']) or not working_window(person['preferences'], end, arrival, 'In person')): conflict = True
+    return {'before':before, 'after':after, 'unknown':unknown, 'conflict':conflict}
 
 
 def build_slots(people, start, end, duration, mode, zone, exclude_before=None):
@@ -126,7 +162,7 @@ def build_slots(people, start, end, duration, mode, zone, exclude_before=None):
         finish = first + timedelta(minutes=duration)
         if exclude_before is None or first >= exclude_before:
             cells = [{'user':p['user'], 'status': candidate_status(p,first,finish,mode), 'required':p['required']} for p in people]
-            available = all(c['status']=='free' for c in cells if c['required'])
+            available = all(c['status']=='free' for c in cells if c['required']) and not any(c['status']=='daily_limit' for c in cells)
             slots.append({'start':first.astimezone(ZoneInfo(zone)).isoformat(),
                           'end':finish.astimezone(ZoneInfo(zone)).isoformat(),
                           'available':available, 'people':cells,

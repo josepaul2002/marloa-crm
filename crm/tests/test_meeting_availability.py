@@ -10,6 +10,20 @@ class AvailabilityRules(unittest.TestCase):
   return r.validate_preferences(p)
  def instant(self,value):return r.aware(value,'Asia/Kolkata')
  def person(self):return {'user':'a','required':True,'preferences':self.preferences(),'busy':[],'buffer':15,'travel_minutes':40,'calendar_error':None}
+ def test_daily_visit_limit_uses_employee_local_date(self):
+  p=self.person();p['preferences']['max_in_person_per_day']=1
+  p['daily_counts']={'2026-11-24':1}
+  self.assertEqual(r.candidate_status(p,self.instant('2026-11-24 11:00'),self.instant('2026-11-24 12:00'),'In person'),'daily_limit')
+  self.assertEqual(r.candidate_status(p,self.instant('2026-11-24 11:00'),self.instant('2026-11-24 12:00'),'Online'),'free')
+ def test_zero_daily_visit_limit(self):
+  p=self.person();p['preferences']['max_in_person_per_day']=0
+  self.assertEqual(r.candidate_status(p,self.instant('2026-11-24 11:00'),self.instant('2026-11-24 12:00'),'In person'),'daily_limit')
+ def test_limit_validation(self):
+  for value in (-1, 1.5, True, 'bad'):
+   p=self.preferences();p['max_in_person_per_day']=value
+   with self.assertRaises(ValueError):r.validate_preferences(p)
+  p=self.preferences();p['max_in_person_per_day']=''
+  self.assertIsNone(r.validate_preferences(p)['max_in_person_per_day'])
  def test_weekend_on_and_monday_off(self):
   p=self.preferences();p['weekly']['Online'][0]=[]
   self.assertFalse(r.working_window(p,self.instant('2026-11-23 10:00'),self.instant('2026-11-23 11:00'),'Online'))
@@ -60,3 +74,21 @@ class AvailabilityRules(unittest.TestCase):
   slots=r.build_slots([self.person()],self.instant('2026-11-24 10:00'),self.instant('2026-11-24 11:00'),30,'Online','Asia/Kolkata',self.instant('2026-11-24 10:20'))
   self.assertEqual(len(slots),1);self.assertIn('10:30',slots[0]['start'])
 if __name__=='__main__':unittest.main()
+
+class JourneyRules(unittest.TestCase):
+ preferences = AvailabilityRules.preferences
+ instant = AvailabilityRules.instant
+ person = AvailabilityRules.person
+ def test_insufficient_time_to_next_visit(self):
+  p=self.person();p['journeys']=[{'start':self.instant('2026-11-24 12:00'),'end':self.instant('2026-11-24 13:00'),'from_minutes':30,'to_minutes':45}]
+  self.assertEqual(r.candidate_status(p,self.instant('2026-11-24 11:00'),self.instant('2026-11-24 11:30'),'In person'),'travel_conflict')
+ def test_previous_location_replaces_default_departure(self):
+  p=self.person();p['travel_minutes']=0
+  p['journeys']=[{'start':self.instant('2026-11-24 09:00'),'end':self.instant('2026-11-24 10:30'),'from_minutes':60,'to_minutes':20}]
+  self.assertEqual(r.candidate_status(p,self.instant('2026-11-24 11:00'),self.instant('2026-11-24 11:30'),'In person'),'travel_conflict')
+ def test_hidden_next_location_is_unknown(self):
+  p=self.person();p['journeys']=[{'start':self.instant('2026-11-24 14:00'),'end':self.instant('2026-11-24 15:00'),'from_minutes':None,'to_minutes':None}]
+  self.assertEqual(r.candidate_status(p,self.instant('2026-11-24 11:00'),self.instant('2026-11-24 11:30'),'In person'),'unknown')
+ def test_holiday_blocks_transparent_calendar_day(self):
+  p=self.person();p['holidays']=[(self.instant('2026-11-24 00:00'),self.instant('2026-11-25 00:00'))]
+  self.assertEqual(r.candidate_status(p,self.instant('2026-11-24 11:00'),self.instant('2026-11-24 11:30'),'Online'),'holiday')
