@@ -44,6 +44,22 @@ describe('meeting scheduling dialog', () => {
   })
 })
 
+describe('loading a meeting in another time zone', () => {
+ it('keeps the saved local time while initialising the form', async () => {
+  call.mockImplementation(async method => {
+   if(method.endsWith('connection_status'))return {status:'connected'}
+   if(method.endsWith('directory'))return {people:[],own_places:[],shared_places:[]}
+   return {timezone:'Australia/Sydney',calendars:[{name:'Work'}],event:{start:{dateTime:'2026-11-24T09:00:00+11:00',timeZone:'Australia/Sydney'},end:{dateTime:'2026-11-24T10:00:00+11:00'},summary:'Saved visit',location:'Office',attendees:[]}}
+  })
+  host=document.createElement('div');document.body.appendChild(host)
+  app=createApp({render:()=>h(ScheduleMeeting,{modelValue:true,deal:'DEAL-1',meeting:'MEETING-1'})})
+  app.config.globalProperties.__=globalThis.__;app.mount(host)
+  await new Promise(r=>setTimeout(r,40));await nextTick()
+  const values=[...document.querySelectorAll('input')].map(el=>el.value)
+  expect(values).toContain('9:00 AM');expect(values).toContain('10:00 AM')
+ })
+})
+
 describe('editing personal hours while scheduling', () => {
   it('hides the meeting dialog for settings and resumes the unsent draft afterwards', async () => {
     const { showSettings } = await import('../../src/composables/settings')
