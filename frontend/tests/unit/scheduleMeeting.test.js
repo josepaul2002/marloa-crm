@@ -43,3 +43,21 @@ describe('meeting scheduling dialog', () => {
     expect(call).toHaveBeenCalledWith('crm.meetings.scheduling.scheduling_context', expect.objectContaining({ deal: 'DEAL-1' }))
   })
 })
+
+describe('editing personal hours while scheduling', () => {
+  it('hides the meeting dialog for settings and resumes the unsent draft afterwards', async () => {
+    const { showSettings } = await import('../../src/composables/settings')
+    showSettings.value = false
+    host = document.createElement('div'); document.body.appendChild(host)
+    app = createApp({ render: () => h(ScheduleMeeting, { modelValue:true, deal:'DEAL-1' }) })
+    app.config.globalProperties.__ = globalThis.__; app.mount(host)
+    await new Promise(r => setTimeout(r,30)); await nextTick()
+    const title = document.querySelector('form input')
+    title.value = 'Unsent demo'; title.dispatchEvent(new Event('input',{bubbles:true})); await nextTick()
+    const button = [...document.querySelectorAll('button')].find(b => b.textContent.includes('My availability'))
+    button.click(); await nextTick(); await nextTick()
+    expect(showSettings.value).toBe(true)
+    showSettings.value = false; await nextTick(); await new Promise(r => setTimeout(r,30))
+    expect(document.querySelector('form input').value).toBe('Unsent demo')
+  })
+})

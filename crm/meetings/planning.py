@@ -196,7 +196,7 @@ def plan(deal, data, selected_time=False, meeting=None):
 
 
 @frappe.whitelist()
-@rate_limit(limit=10, seconds=60)
+@rate_limit(limit=10, seconds=60, user_based=True)
 def find_times(deal, data, meeting=None):
     return plan(deal,data,meeting=meeting)
 
@@ -225,7 +225,7 @@ def check_before_send(deal,data,meeting=None):
 
 
 @frappe.whitelist()
-@rate_limit(limit=3, seconds=60)
+@rate_limit(limit=3, seconds=60, user_based=True)
 def test_routes_connection():
     require_crm()
     frappe.only_for('System Manager')
