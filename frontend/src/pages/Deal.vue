@@ -10,11 +10,11 @@
     <template v-if="!errorTitle" #right-header>
       <CustomActions
         v-if="document._actions?.length"
-        :actions="document._actions"
+        :actions="meetingHeaderActions(document._actions)"
       />
       <CustomActions
         v-if="document.actions?.length"
-        :actions="document.actions"
+        :actions="meetingHeaderActions(document.actions)"
       />
       <EnrichFromWebsite
         doctype="CRM Deal"
@@ -47,7 +47,14 @@
       class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-1 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-[22px] [&>[role='tabpanel']:not([hidden])]:flex [&>[role='tabpanel']:not([hidden])]:grow [&>[data-slot=tab-list]]:overflow-x-auto [&_[data-slot=tab-indicator]]:translate-y-0 [&>[data-slot=tab-panel]]:min-h-0 [&>[data-slot=tab-panel]]:flex-col [&>[data-slot=tab-panel]]:overflow-auto"
     >
       <template #tab-panel>
+        <DealMeetings
+          v-if="activeTab === 'meetings'"
+          :key="dealId"
+          :deal="dealId"
+          :trigger="(method, name) => doc.trigger(method, name)"
+        />
         <Activities
+          v-show="activeTab !== 'meetings'"
           ref="activities"
           v-model:reload="reload"
           v-model:activeTab="activeTab"
@@ -339,6 +346,8 @@
   />
 </template>
 <script setup>
+import DealMeetings from '@/components/Meetings/DealMeetings.vue'
+import CalendarIcon from '@/components/Icons/CalendarIcon.vue'
 import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
 import ErrorPage from '@/components/ErrorPage.vue'
 import Icon from '@/components/Icon.vue'
@@ -739,6 +748,10 @@ usePageMeta(() => {
   }
 })
 
+function meetingHeaderActions(actions) {
+  return (actions || []).filter(a => !['Schedule meeting', 'Record past meeting', 'Add meeting'].includes(a.label))
+}
+
 const tabs = computed(() => {
   let tabOptions = [
     {
@@ -770,6 +783,12 @@ const tabs = computed(() => {
       value: 'calls',
       label: __('Calls'),
       iconLeft: PhoneIcon,
+    },
+    {
+      name: 'Meetings',
+      value: 'meetings',
+      label: __('Meetings'),
+      iconLeft: CalendarIcon,
     },
     {
       name: 'Tasks',

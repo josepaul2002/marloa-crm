@@ -1,0 +1,1 @@
+"""Google-connected meeting workspace."""

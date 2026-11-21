@@ -351,7 +351,7 @@ scheduler_events = {
 	"hourly_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_hourly"],
 	"monthly_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_monthly"],
 	"cron": {
-		"*/5 * * * *": ["crm.lead_syncing.background_sync.sync_leads_from_sources_5_minutes"],
+		"*/5 * * * *": ["crm.lead_syncing.background_sync.sync_leads_from_sources_5_minutes", "crm.meetings.google_sync.sync_customer_calendars"],
 		"*/10 * * * *": ["crm.lead_syncing.background_sync.sync_leads_from_sources_10_minutes"],
 		"*/15 * * * *": ["crm.lead_syncing.background_sync.sync_leads_from_sources_15_minutes"],
 	},
@@ -429,6 +429,7 @@ ignore_links_on_delete = ["Failed Lead Sync Log"]
 on_session_creation = ["crm.api.onboarding.complete_setup_for_fc_site"]
 
 after_migrate = [
+	"crm.meetings.setup.setup",
 	"crm.api.marloa_phone.configure_mobile_input",
 	"crm.api.marloa_work_apps.seed_defaults",
 	"crm.fcrm.doctype.fcrm_settings.fcrm_settings.after_migrate",
