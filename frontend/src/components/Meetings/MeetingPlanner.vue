@@ -5,7 +5,7 @@
     <p class="text-sm text-ink-gray-5">{{ __('Deal assignees are suggested. Select who needs to attend; viewing a deal does not invite anyone.') }}</p>
     <FormControl v-model="peopleQuery" :placeholder="__('Search employees…')" :label="__('Add people')" />
     <div class="flex flex-wrap gap-2">
-      <Button v-for="person in filteredPeople" :key="person.user" :variant="selected(person.user) ? 'subtle' : 'outline'" :icon-left="selected(person.user) ? 'lucide-check' : 'lucide-plus'" :label="person.name + (person.suggested ? ' · ' + __('Suggested') : '')" @click="toggle(person)" />
+      <Button v-for="person in filteredPeople" :key="person.user" :variant="selected(person.user) ? 'subtle' : 'outline'" :icon-left="selected(person.user) ? 'lucide-check' : 'lucide-plus'" :label="person.name + (person.title ? ' · ' + person.title : '') + (person.suggested ? ' · ' + __('Suggested') : '')" @click="toggle(person)" />
     </div>
     <div v-for="row in data.internal_attendees" :key="row.user" class="space-y-3 rounded-lg border border-outline-gray-2 p-3">
       <div class="flex flex-wrap items-center justify-between gap-3"><span class="text-sm font-medium text-ink-gray-9">{{ employee(row.user)?.name || row.user }}</span><FormControl :model-value="!row.required" type="checkbox" :label="__('Optional attendee')" @update:model-value="v => row.required = !v" /></div>
@@ -70,7 +70,7 @@ const props = defineProps({ data: { type: Object, required: true }, deal: String
 const emit = defineEmits(['selected', 'preferences', 'services'])
 const directory = ref({ people: [], own_places: [], shared_places: [] }), from = ref(''), to = ref(''), duration = ref(30), result = ref(null), loading = ref(false), error = ref(''), page = ref(0)
 const peopleQuery = ref('')
-const filteredPeople = computed(() => directory.value.people.filter(p => (p.name + ' ' + p.user).toLowerCase().includes(peopleQuery.value.toLowerCase())))
+const filteredPeople = computed(() => directory.value.people.filter(p => (p.name + ' ' + (p.title || '') + ' ' + p.user).toLowerCase().includes(peopleQuery.value.toLowerCase())))
 const showFullDay = ref(false)
 const focusedSlot = ref(null)
 let generation = 0, disposed = false, autoTimer
