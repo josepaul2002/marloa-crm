@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model:open="show" :title="meeting ? __('Edit meeting invitation') : __('Schedule meeting')" size="3xl">
+  <Dialog v-model:open="dialogOpen" :title="meeting ? __('Edit meeting invitation') : __('Schedule meeting')" size="3xl">
     <template #default>
       <div v-if="loading" class="text-ink-gray-5">{{ __('Loading calendar…') }}</div>
       <form v-else class="space-y-4" @submit.prevent="save">
@@ -13,7 +13,7 @@
         <FormControl v-model="data.timezone" :label="__('Time zone')" placeholder="Asia/Kolkata" />
         <MeetingLocationSearch v-if="data.mode === 'In person'" :browser-key="placesKey" @select="value => data.location = value" />
         <FormControl v-if="data.mode === 'In person'" v-model="data.location" :label="__('Physical location')" placeholder="Enter the complete address" />
-        <MeetingPlanner :data="data" :deal="deal" :meeting="meeting" />
+        <MeetingPlanner :data="data" :deal="deal" :meeting="meeting" @preferences="openAvailability" />
         <FormControl v-model="query" :label="__('Find a guest')" :placeholder="__('Type a name or email…')" @input="search" />
         <div v-if="suggestions.length" class="max-h-40 overflow-auto rounded border border-outline-gray-2">
           <button v-for="guest in suggestions" :key="guest.email" type="button" class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-surface-gray-2" @click="addGuest(guest)">
@@ -64,13 +64,18 @@
   </Dialog>
 </template>
 <script setup>
+import { activeSettingsPage, showSettings } from '@/composables/settings'
 import MeetingPlanner from './MeetingPlanner.vue'
 import MeetingLocationSearch from './MeetingLocationSearch.vue'
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { Dialog, Button, FormControl, DatePicker, DateTimePicker, Tooltip, call } from 'frappe-ui'
 const props = defineProps({ deal: String, meeting: String })
 const emit = defineEmits(['saved', 'close'])
 const show = defineModel({ default: true })
+const preferencesOpen = ref(false)
+const dialogOpen = computed({ get: () => show.value && !preferencesOpen.value, set: value => { if (!preferencesOpen.value) show.value = value } })
+async function openAvailability() { preferencesOpen.value = true; await nextTick(); activeSettingsPage.value = 'My availability'; showSettings.value = true }
+watch(showSettings, value => { if (!value && preferencesOpen.value) preferencesOpen.value = false })
 const ready = ref(false)
 const loading = ref(true), saving = ref(false), error = ref(''), event = ref(null), calendars = ref([])
 const suggestions = ref([]), query = ref(''), connectionState = ref('checking'), canOverride = ref(false)

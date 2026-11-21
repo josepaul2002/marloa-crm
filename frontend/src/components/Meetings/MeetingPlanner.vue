@@ -47,9 +47,8 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Button, FormControl, DatePicker, call } from 'frappe-ui'
-import { activeSettingsPage, showSettings } from '@/composables/settings'
 const props = defineProps({ data: { type: Object, required: true }, deal: String, meeting: String })
-const emit = defineEmits(['selected'])
+const emit = defineEmits(['selected', 'preferences'])
 const directory = ref({ people: [], own_places: [], shared_places: [] }), from = ref(''), to = ref(''), duration = ref(30), result = ref(null), loading = ref(false), error = ref(''), page = ref(0)
 let generation = 0, disposed = false
 const travelModes = [{ label: __('Driving'), value: 'DRIVE' }, { label: __('Two-wheeler'), value: 'TWO_WHEELER' }, { label: __('Walking'), value: 'WALK' }, { label: __('Public transport'), value: 'TRANSIT' }, { label: __('Cycling'), value: 'BICYCLE' }]
@@ -78,7 +77,7 @@ function originOptions(row) {
   if (row.user === directory.value.me && directory.value.own_places.length) options.push({ label: __('My saved place'), value: 'personal' })
   return options
 }
-function openPreferences() { activeSettingsPage.value = 'My availability'; showSettings.value = true }
+function openPreferences() { emit('preferences') }
 function format(value) { return new Intl.DateTimeFormat(undefined, { timeZone: props.data.timezone, month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }).format(new Date(value)) }
 function statusLabel(status) { return ({free:__('Free'),busy:__('Busy'),outside_hours:__('Outside hours'),unknown:__('Unknown'),travel_conflict:__('Travel conflict')})[status] }
 function statusColor(status) { return status === 'free' ? 'text-ink-green-5' : status === 'unknown' ? 'text-ink-gray-5' : 'text-ink-orange-5' }
