@@ -8,7 +8,7 @@
           <FormControl v-model="data.calendar" type="select" :options="calendars" :label="__('Organizer calendar')" :disabled="Boolean(event)" />
           <FormControl v-model="data.mode" type="select" :options="['Online', 'In person']" :label="__('Meeting type')" />
           <FormControl v-model="data.start" :type="data.all_day ? 'date' : 'datetime-local'" :label="__('Start')" required />
-          <FormControl v-model="data.end" :type="data.all_day ? 'date' : 'datetime-local'" :label="data.all_day ? __('End date (exclusive)') : __('End')" required />
+          <FormControl v-model="data.end" :type="data.all_day ? 'date' : 'datetime-local'" :label="data.all_day ? __('Last day') : __('End')" required />
         </div>
         <FormControl v-model="data.timezone" :label="__('Time zone')" placeholder="Asia/Kolkata" />
         <MeetingLocationSearch v-if="data.mode === 'In person'" :browser-key="placesKey" @select="value => data.location = value" />
@@ -81,7 +81,7 @@ onMounted(async () => {
     if (e) {
       const rule = (e.recurrence || [])[0] || ''
       if (rule && !/^RRULE:FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY);COUNT=\d+$/.test(rule)) throw new Error(__('This recurring series has a custom rule. Edit its schedule in Google Calendar.'))
-      Object.assign(data, { start: (e.start.dateTime || e.start.date).slice(0, e.start.date ? 10 : 16), end: (e.end.dateTime || e.end.date).slice(0, e.end.date ? 10 : 16), all_day: Boolean(e.start.date), timezone: e.start.timeZone || 'Asia/Kolkata', title: e.summary, agenda: e.description || '', location: e.location || '', mode: e.hangoutLink || e.conferenceData ? 'Online' : 'In person', invitees: (e.attendees || []).filter(a => !a.optional).map(a => a.email).join(', '), optional_invitees: (e.attendees || []).filter(a => a.optional).map(a => a.email).join(', '), visibility: e.visibility || 'default', free: e.transparency === 'transparent', guests_can_edit: Boolean(e.guestsCanModify), guests_can_invite: Boolean(e.guestsCanInviteOthers), guests_can_see: e.guestsCanSeeOtherGuests !== false, drive_links: (e.attachments || []).map(a => a.fileUrl).join('\n'), repeat: rule.match(/FREQ=(\w+)/)?.[1] || 'NONE', repeat_count: Number(rule.match(/COUNT=(\d+)/)?.[1] || 12), reminder: e.reminders?.useDefault ? 10 : (e.reminders?.overrides?.[0]?.minutes ?? -1) })
+      Object.assign(data, { start: (e.start.dateTime || e.start.date).slice(0, e.start.date ? 10 : 16), end: (e.end.date ? new Date(Date.parse(e.end.date + 'T00:00:00Z') - 86400000).toISOString().slice(0, 10) : e.end.dateTime.slice(0, 16)), all_day: Boolean(e.start.date), timezone: e.start.timeZone || 'Asia/Kolkata', title: e.summary, agenda: e.description || '', location: e.location || '', mode: e.hangoutLink || e.conferenceData ? 'Online' : 'In person', invitees: (e.attendees || []).filter(a => !a.optional).map(a => a.email).join(', '), optional_invitees: (e.attendees || []).filter(a => a.optional).map(a => a.email).join(', '), visibility: e.visibility || 'default', free: e.transparency === 'transparent', guests_can_edit: Boolean(e.guestsCanModify), guests_can_invite: Boolean(e.guestsCanInviteOthers), guests_can_see: e.guestsCanSeeOtherGuests !== false, drive_links: (e.attachments || []).map(a => a.fileUrl).join('\n'), repeat: rule.match(/FREQ=(\w+)/)?.[1] || 'NONE', repeat_count: Number(rule.match(/COUNT=(\d+)/)?.[1] || 12), reminder: e.reminders?.useDefault ? 10 : (e.reminders?.overrides?.[0]?.minutes ?? -1) })
     }
     ready.value = true
   } catch (e) { error.value = e.message || __('Unable to load calendar.') }

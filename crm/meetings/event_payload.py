@@ -1,5 +1,5 @@
 """Validated Google event payloads; no OAuth or database dependencies."""
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 from urllib.parse import urlsplit
 import re
@@ -26,14 +26,14 @@ def build_payload(data, existing=None):
     tz=ZoneInfo(zone)
     all_day=bool(data.get('all_day'))
     if all_day:
-        start=date.fromisoformat(str(data['start'])[:10]);end=date.fromisoformat(str(data['end'])[:10])
+        start=date.fromisoformat(str(data['start'])[:10]);end=date.fromisoformat(str(data['end'])[:10])+timedelta(days=1)
         start_value={'date':start.isoformat()};end_value={'date':end.isoformat()}
     else:
         start=datetime.fromisoformat(str(data['start']).replace(' ','T'));end=datetime.fromisoformat(str(data['end']).replace(' ','T'))
         if start.tzinfo is None:start=start.replace(tzinfo=tz)
         if end.tzinfo is None:end=end.replace(tzinfo=tz)
         start_value={'dateTime':start.isoformat(),'timeZone':zone};end_value={'dateTime':end.isoformat(),'timeZone':zone}
-    if end<=start:raise ValueError('End must be later than start; all-day end dates are exclusive.')
+    if end<=start:raise ValueError('The meeting must end after it starts.')
     required=emails(data.get('invitees'));optional=emails(data.get('optional_invitees'))
     if not required and not optional:raise ValueError('Add at least one guest.')
     previous={a['email'].lower():a for a in existing.get('attendees',[]) if a.get('email')}

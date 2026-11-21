@@ -13,5 +13,8 @@ class PayloadTests(unittest.TestCase):
   with self.assertRaises(ValueError):m.build_payload(self.data(drive_links='https://evil.example/file'))
  def test_repeat(self):self.assertEqual(m.build_payload(self.data(repeat='WEEKLY',repeat_count=4))['recurrence'],['RRULE:FREQ=WEEKLY;COUNT=4'])
  def test_permissions_default(self):self.assertFalse(m.build_payload(self.data())['guestsCanModify'])
+ def test_single_day_end_is_google_exclusive(self):
+  d=self.data(all_day=True);d['start']='2026-12-01';d['end']='2026-12-01'
+  self.assertEqual(m.build_payload(d)['end'],{'date':'2026-12-02'})
  def test_optional_duplicate(self):self.assertEqual(len(m.build_payload(self.data(optional_invitees='test@gmail.com'))['attendees']),1)
 if __name__=='__main__':unittest.main()

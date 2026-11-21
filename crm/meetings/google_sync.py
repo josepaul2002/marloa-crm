@@ -62,8 +62,11 @@ def sync_calendar(name):
         return
     if account.pull_from_google_calendar:
         frappe.throw('Disable framework calendar pull before enabling CRM customer-only import.')
-    if account.google_calendar_id == 'primary':
+    if account.google_calendar_id in ('primary', account.user):
         frappe.throw('Select a dedicated customer calendar instead of primary.')
+    calendar_entry=service.calendarList().get(calendarId=account.google_calendar_id).execute()
+    if calendar_entry.get('primary'):
+        frappe.throw('Primary calendars cannot be imported by customer-calendar sync.')
     token = account.get_password('custom_marloa_sync_token', raise_exception=False)
     page = None
     while True:
