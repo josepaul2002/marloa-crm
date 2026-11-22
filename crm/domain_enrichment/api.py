@@ -121,6 +121,41 @@ def enrich(reference_doctype: str, reference_name: str) -> dict:
 	return _enqueue_run(cfg, reference_doctype, reference_name, website)
 
 
+@frappe.whitelist(methods=["POST"])
+@rate_limit(limit=2, seconds=60)
+def bulk_enrich(names: list[str]) -> list[dict]:
+	"""Queue a bounded, permission-checked selection; failures stay per record.
+
+	Only explicit organization names are accepted, never a filter that can expand
+	into an unexpectedly large credit/network-consuming operation.
+	"""
+	if not isinstance(names, list) or not names or len(names) > 25:
+		frappe.throw(_("Select between 1 and 25 organizations."), frappe.ValidationError)
+	if any(not isinstance(name, str) or not name.strip() for name in names):
+		frappe.throw(_("Invalid organization selection."), frappe.ValidationError)
+	cfg = get_config()
+	results = []
+	for name in dict.fromkeys(names):
+		try:
+			_check_writable(cfg, "CRM Organization", name)
+			doc = frappe.get_doc("CRM Organization", name)
+			website = (doc.get("website") or "").strip()
+			if not website:
+				results.append({"name": name, "status": "Skipped", "message": _("No website")})
+				continue
+			result = _enqueue_run(cfg, "CRM Organization", name, website)
+			results.append({"name": name, "status": "Queued" if result["queued"] else "Running",
+				"message": _("Queued") if result["queued"] else _("Already queued or running")})
+		except (frappe.PermissionError, frappe.DoesNotExistError):
+			results.append({"name": name, "status": "Failed", "message": _("Not available or no write permission")})
+		except frappe.ValidationError as exc:
+			results.append({"name": name, "status": "Failed", "message": cstr(exc)})
+		except Exception:
+			frappe.log_error(title="Bulk organization enrichment failed")
+			results.append({"name": name, "status": "Failed", "message": _("Could not queue research. Try again or check the error log.")})
+	return results
+
+
 @frappe.whitelist()
 @rate_limit(limit=ENRICH_RATE_LIMIT, seconds=60)
 def retry(run: str) -> dict:
