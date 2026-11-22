@@ -134,6 +134,11 @@
     </ListRows>
     <ListSelectBanner>
       <template #actions="{ selections, unselectAll }">
+        <Button
+          :label="__('Enrich selected')"
+          iconLeft="lucide-zap"
+          @click="enrichSelection = Array.from(selections); showBulkEnrich = true"
+        />
         <Dropdown
           :options="listBulkActionsRef.bulkActions(selections, unselectAll)"
         >
@@ -151,6 +156,7 @@
     }"
     @loadMore="emit('loadMore')"
   />
+  <BulkEnrichModal v-if="showBulkEnrich" v-model="showBulkEnrich" :names="enrichSelection" @done="list.reload()" />
   <ListBulkActions
     ref="listBulkActionsRef"
     v-model="list"
@@ -161,6 +167,7 @@
   />
 </template>
 <script setup>
+import BulkEnrichModal from '@/components/Modals/BulkEnrichModal.vue'
 import HeartIcon from '@/components/Icons/HeartIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
@@ -238,6 +245,8 @@ watch(pageLengthCount, (val, old_value) => {
   emit('updatePageCount', val)
 })
 
+const showBulkEnrich = ref(false)
+const enrichSelection = ref([])
 const listBulkActionsRef = ref(null)
 
 defineExpose({
