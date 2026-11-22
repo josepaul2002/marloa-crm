@@ -60,6 +60,24 @@ describe('loading a meeting in another time zone', () => {
  })
 })
 
+describe('meeting save validation',()=>{
+ it('shows the actionable server message instead of the endpoint and exception type',async()=>{
+  call.mockImplementation(async method=>{
+   if(method.endsWith('save_invitation'))throw Object.assign(new Error('/api/method/crm.meetings.scheduling.save_invitation ValidationError'),{messages:['Choose the meeting location first.']})
+   if(method.endsWith('connection_status'))return {status:'connected'}
+   if(method.endsWith('directory'))return {people:[],own_places:[],shared_places:[]}
+   return {calendars:[{name:'Work'}]}
+  })
+  host=document.createElement('div');document.body.appendChild(host);app=createApp({render:()=>h(ScheduleMeeting,{modelValue:true,deal:'DEAL-1'})});app.config.globalProperties.__=globalThis.__;app.mount(host)
+  await new Promise(r=>setTimeout(r,40));await nextTick()
+  document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,20));await nextTick()
+  expect(document.body.textContent).toContain('Choose the meeting location first.')
+  expect(document.body.textContent).not.toContain('save_invitation ValidationError')
+  expect(document.querySelector('img[alt="Google Calendar"]')).not.toBeNull()
+  expect(document.querySelector('img[alt="Google Maps"]')).not.toBeNull()
+ })
+})
+
 describe('editing personal hours while scheduling', () => {
   it('hides the meeting dialog for settings and resumes the unsent draft afterwards', async () => {
     const { showSettings } = await import('../../src/composables/settings')

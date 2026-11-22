@@ -332,7 +332,10 @@ def check_before_send(deal,data,meeting=None):
     if issues or data.get('all_day') or data.get('repeat','NONE')!='NONE':
         from crm.meetings.permissions import is_manager
         if not is_manager() or len(reason)<8:
-            frappe.throw('Availability or travel conflicts need review. Choose another time, or ask a manager to provide an override reason.')
+            labels={'busy':'already busy','outside_hours':'outside working hours','holiday':'observed holiday','daily_limit':'daily in-person meeting limit reached','travel_conflict':'not enough travel time','unknown':'calendar, working hours or travel details are unavailable'}
+            names={p['user']:p.get('name') or p['user'] for p in result.get('people',[])}
+            details='; '.join(names.get(c['user'],c['user'])+': '+labels.get(c['status'],c['status']) for c in issues)
+            frappe.throw('Meeting not sent. '+(details+'. ' if details else '')+'Choose another time, or ask a manager to provide an override reason of at least eight characters.')
     return result,reason
 
 
