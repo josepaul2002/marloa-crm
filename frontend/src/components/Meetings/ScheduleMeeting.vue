@@ -10,8 +10,8 @@
           <component :is="data.all_day ? DatePicker : MeetingDateTime" v-model="data.end" :label="data.all_day ? __('Last day') : __('End')" required />
         </div>
         <FormControl v-model="data.timezone" type="select" :options="timezones" :label="__('Viewing time zone')" />
-        <GoogleAddressField v-if="data.mode === 'In person'" v-model="data.location" :browser-key="placesKey" :label="__('Meeting location')" />
-        <MeetingPlanner :data="data" :deal="deal" :meeting="meeting" :browser-key="placesKey" @preferences="openAvailability" @services="value => services = value" />
+        <GoogleAddressField v-if="data.mode === 'In person'" v-model="data.location" :browser-key="placesKey" :label="__('Meeting location')" @health="value => placesState = value" />
+        <MeetingPlanner :data="data" :deal="deal" :meeting="meeting" :browser-key="placesKey" @preferences="openAvailability" @services="value => services = value" @places="value => placesState = value" />
         <FormControl v-model="data.title" :placeholder="__('Meeting title')" :label="__('Meeting title')" required />
         <FormControl v-model="query" :label="__('Find a guest')" :placeholder="__('Type a name or email…')" @input="search" />
         <div v-if="suggestions.length" class="max-h-40 overflow-auto rounded border border-outline-gray-2">
@@ -51,10 +51,10 @@
         <Button type="submit" variant="solid" :label="event ? __('Send update to guests') : __('Send invitation')" :loading="saving" :disabled="!data.calendar || saving || !ready" />
         <div class="flex justify-end">
         <div class="flex items-center justify-between gap-3 text-sm text-ink-gray-5">
-          <Tooltip v-for="(state, service) in services" :key="service" :text="(service === 'calendar' ? __('Google Calendar') : __('Google Routes')) + ': ' + state"><span class="relative inline-flex size-7 items-center justify-center rounded bg-surface-gray-2" role="status" :aria-label="service + ': ' + state"><span class="size-4" :class="service === 'calendar' ? 'lucide-calendar' : 'lucide-map-pin'" aria-hidden="true" /><span class="absolute bottom-0 right-0 size-2 rounded-full border border-surface-gray-2" :class="{'bg-green-500':state === 'connected','bg-red-500':state === 'error','bg-gray-400':state === 'unused','bg-blue-500 motion-safe:animate-pulse':state === 'checking'}" /></span></Tooltip>
+          <Tooltip v-for="(state, service) in serviceIndicators" :key="service" :text="service === 'calendar' ? __('Google Calendar') + ': ' + state : __('Google Maps') + ' — ' + __('Address suggestions') + ': ' + placesState + '; ' + __('Routes') + ': ' + services.routes"><span class="relative inline-flex size-7 items-center justify-center rounded bg-surface-gray-2" role="status" :aria-label="service + ': ' + state"><img :src="service === 'calendar' ? googleCalendarLogo : googleMapsLogo" :alt="service === 'calendar' ? 'Google Calendar' : 'Google Maps'" class="size-5 object-contain" /><span class="absolute bottom-0 right-0 size-2 rounded-full border border-surface-gray-2" :class="{'bg-green-500':state === 'connected','bg-red-500':state === 'error','bg-transparent border-outline-gray-4':state === 'unused','bg-blue-500 motion-safe:animate-pulse':state === 'checking'}" /></span></Tooltip>
           <Tooltip :text="connectionLabel">
             <span class="relative inline-flex size-8 items-center justify-center rounded-full bg-surface-gray-2" role="status" :aria-label="connectionLabel">
-              <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true"><path fill="#4285F4" d="M4 3h16v18H4z"/><circle cx="12" cy="9" r="3" fill="white"/><path fill="white" d="M6.5 18c0-3 2-5 5.5-5s5.5 2 5.5 5z"/></svg>
+              <img :src="googleContactsLogo" alt="Google Contacts" class="size-5 object-contain" />
               <span class="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-surface-elevation-2" :class="connectionState === 'connected' ? 'bg-green-500' : ['unavailable','api_unavailable','reconnect'].includes(connectionState) ? 'bg-red-500' : 'bg-gray-400'" />
             </span>
           </Tooltip>
@@ -68,7 +68,11 @@
   </Dialog>
 </template>
 <script setup>
+import googleCalendarLogo from '@/assets/integrations/google-calendar.svg'
+import googleMapsLogo from '@/assets/integrations/google-maps.svg'
+import googleContactsLogo from '@/assets/integrations/google-contacts.svg'
 import { activeSettingsPage, showSettings } from '@/composables/settings'
+import { meetingErrorMessage } from './meetingErrors'
 import { timezoneOptions, wallTime, instantFromWall } from './timezones'
 import MeetingDateTime from './MeetingDateTime.vue'
 import MeetingPlanner from './MeetingPlanner.vue'
@@ -84,6 +88,8 @@ async function openAvailability() { preferencesOpen.value = true; await nextTick
 watch(showSettings, value => { if (!value && preferencesOpen.value) preferencesOpen.value = false })
 const timezones = timezoneOptions
 const services = ref({calendar:'unused',routes:'unused'})
+const placesState = ref('unused')
+const serviceIndicators = computed(() => ({calendar:services.value.calendar, maps:[placesState.value,services.value.routes].includes('error') ? 'error' : [placesState.value,services.value.routes].includes('checking') ? 'checking' : [placesState.value,services.value.routes].includes('connected') ? 'connected' : 'unused'}))
 const ready = ref(false)
 const loading = ref(true), saving = ref(false), error = ref(''), event = ref(null), calendars = ref([])
 const suggestions = ref([]), query = ref(''), connectionState = ref('checking'), canOverride = ref(false)
@@ -121,7 +127,7 @@ onMounted(async () => {
     // Finish initial time-zone updates before treating changes as user edits.
     await nextTick()
     ready.value = true
-  } catch (e) { error.value = e.message || __('Unable to load calendar.') }
+  } catch (e) { error.value = meetingErrorMessage(e, __('Unable to load calendar.')) }
   finally { loading.value = false }
 })
 function search() {
@@ -136,12 +142,12 @@ function search() {
   }, 300)
 }
 function addGuest(guest) { const emails = new Set(data.invitees.split(',').map(e => e.trim()).filter(Boolean)); emails.add(guest.email); data.invitees = [...emails].join(', '); suggestions.value = []; query.value = ''; generation++ }
-async function connectContacts() { try { const result = await call('crm.meetings.contacts.authorize_contacts'); window.location.assign(result.url) } catch (e) { error.value = e.message } }
+async function connectContacts() { try { const result = await call('crm.meetings.contacts.authorize_contacts'); window.location.assign(result.url) } catch (e) { error.value = meetingErrorMessage(e) } }
 async function save() {
   if (saving.value) return
   saving.value = true; error.value = ''
   try { await call('crm.meetings.scheduling.save_invitation', { deal: props.deal, meeting: props.meeting, data: JSON.stringify(data), request_id: requestId, etag: event.value?.etag }); emit('saved'); show.value = false }
-  catch (e) { error.value = e.message || __('Invitation could not be confirmed. Reopen the meeting before retrying.') }
+  catch (e) { error.value = meetingErrorMessage(e, __('Invitation could not be confirmed. Reopen the meeting before retrying.')) }
   finally { saving.value = false }
 }
 onUnmounted(() => { disposed = true; generation++; clearTimeout(timer) })

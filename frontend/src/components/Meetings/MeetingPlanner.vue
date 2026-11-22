@@ -11,7 +11,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3"><span class="text-sm font-medium text-ink-gray-9">{{ employee(row.user)?.name || row.user }}</span><FormControl :model-value="!row.required" type="checkbox" :label="__('Optional attendee')" @update:model-value="v => row.required = !v" /></div>
       <template v-if="data.mode === 'In person'">
         <FormControl :model-value="originChoice(row)" type="select" :options="originOptions(row)" :label="__('Travelling from')" @update:model-value="value => setOrigin(row, value)" />
-        <GoogleAddressField v-if="row.origin_source === 'manual'" v-model="row.origin_address" :browser-key="browserKey" :label="__('Departure address')" />
+        <GoogleAddressField v-if="row.origin_source === 'manual'" v-model="row.origin_address" :browser-key="browserKey" :label="__('Departure address')" @health="value => emit('places', value)" />
         <Button v-if="row.user === directory.me" variant="ghost" icon-left="lucide-map-pin" :label="__('Add or edit my saved places')" @click="openPreferences" />
         <div class="grid gap-3 sm:grid-cols-2"><FormControl v-model="row.travel_mode" type="select" :options="travelModes" :label="__('Travel mode')" /><FormControl v-model="row.buffer_minutes" type="number" :label="__('Arrival buffer (minutes)')" min="0" max="180" /></div>
         <FormControl v-model="row.manual_minutes" type="number" :label="__('Manual travel estimate (minutes, optional)')" min="0" max="1440" :placeholder="__('Leave empty to use Google Maps')" />
@@ -63,11 +63,12 @@
   </section>
 </template>
 <script setup>
+import { meetingErrorMessage } from './meetingErrors'
 import GoogleAddressField from './GoogleAddressField.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Button, FormControl, DatePicker, call } from 'frappe-ui'
 const props = defineProps({ data: { type: Object, required: true }, deal: String, meeting: String, browserKey: String })
-const emit = defineEmits(['selected', 'preferences', 'services'])
+const emit = defineEmits(['selected', 'preferences', 'services', 'places'])
 const directory = ref({ people: [], own_places: [], shared_places: [] }), from = ref(''), to = ref(''), duration = ref(30), result = ref(null), loading = ref(false), error = ref(''), page = ref(0)
 const peopleQuery = ref('')
 const filteredPeople = computed(() => directory.value.people.filter(p => (p.name + ' ' + (p.title || '') + ' ' + p.user).toLowerCase().includes(peopleQuery.value.toLowerCase())))
@@ -87,7 +88,7 @@ onMounted(async () => {
     const weekday = new Date(anchor+'T12:00:00Z').getUTCDay()
     from.value = addDays(anchor, -((weekday+6)%7)); to.value = addDays(from.value, 6)
     if (!props.data.internal_attendees.length) { const me = employee(directory.value.me); if (me) toggle(me) }
-  } catch(e) { error.value = e.message }
+  } catch(e) { error.value = meetingErrorMessage(e) }
 })
 function addDays(value, offset) { const d = new Date(value+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+offset); return d.toISOString().slice(0,10) }
 function shiftWeek(offset) { from.value = addDays(from.value, offset); to.value = addDays(from.value, 6) }
@@ -126,7 +127,7 @@ async function check() {
     const next = new Date(to.value+'T00:00:00Z'); next.setUTCDate(next.getUTCDate()+1)
     const response = await call('crm.meetings.planning.find_times', { deal: props.deal, meeting: props.meeting, data: JSON.stringify({ from:from.value+'T00:00:00',to:next.toISOString().slice(0,10)+'T00:00:00',duration:duration.value,timezone:props.data.timezone,mode:props.data.mode,location:props.data.location,attendees:props.data.internal_attendees }) })
     if (!disposed && id === generation) { result.value = response; page.value = 0; emit('services', {calendar:response.people.some(p=>p.calendar_error) ? 'error' : 'connected',routes:response.services?.routes || 'unused'}) }
-  } catch(e) { if (id === generation) { error.value = e.message; emit('services',{calendar:'error',routes:'unused'}) } } finally { if (id === generation) loading.value = false; else loading.value = false }
+  } catch(e) { if (id === generation) { error.value = meetingErrorMessage(e); emit('services',{calendar:'error',routes:'unused'}) } } finally { if (id === generation) loading.value = false; else loading.value = false }
 }
 function localValue(value) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: props.data.timezone, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23' }).formatToParts(new Date(value))

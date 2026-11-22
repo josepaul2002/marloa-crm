@@ -92,4 +92,8 @@ class PlanningGuards(unittest.TestCase):
   result=m.plan('DEAL',data)
   self.assertEqual(result['people'][0]['travel_minutes'],20)
   self.assertTrue(result['suggestions'])
+ def test_validation_names_the_attendee_and_reason(self):
+  m,_,_,_=self.load();m.plan=lambda *a,**kw:{'people':[{'user':'employee@work.in','name':'Employee'}],'slots':[{'people':[{'user':'employee@work.in','required':True,'status':'outside_hours'}]}]}
+  data={'start':'2030-01-01 10:00','end':'2030-01-01 11:00','internal_attendees':[{'user':'employee@work.in'}]}
+  with self.assertRaisesRegex(ValueError,'Employee: outside working hours'):m.check_before_send('DEAL',data)
 if __name__=='__main__':unittest.main()
