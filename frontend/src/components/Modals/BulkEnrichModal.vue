@@ -1,6 +1,6 @@
 <template>
-  <Dialog v-model:open="show" :options="{ title: __('Enrich organizations'), size: 'xl' }">
-    <template #body-content>
+  <Dialog v-model:open="show" :title="__('Enrich organizations')" size="xl">
+    <template #default>
       <div class="space-y-4 text-base text-ink-gray-7">
         <p>{{ __('{0} organizations selected', [names.length]) }}</p>
         <p v-if="!started">
