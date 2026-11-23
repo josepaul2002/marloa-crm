@@ -40,6 +40,7 @@
             @click="confirmDelete()"
           />
           <Button
+            v-if="props.doctype !== 'CRM Organization'"
             :label="__('Unlink & Delete {0} items', [props.items.length])"
             icon-left="lucide-unlock"
             variant="solid"
@@ -92,6 +93,7 @@
             "
             variant="solid"
             theme="red"
+            :loading="deleting"
             @click="deleteDocs()"
           />
           <Button
@@ -101,14 +103,18 @@
           />
         </div>
       </div>
+      <p v-if="error" class="px-6 pb-4 text-ink-red-4" role="alert">{{ error }}</p>
     </template>
   </Dialog>
 </template>
 
 <script setup>
 import { Dialog, call } from 'frappe-ui'
+import { meetingErrorMessage } from '@/components/Meetings/meetingErrors'
 import { ref } from 'vue'
 
+const error = ref('')
+const deleting = ref(false)
 const show = defineModel({ type: Boolean })
 const props = defineProps({
   doctype: { type: String, required: true },
@@ -146,6 +152,9 @@ const confirmUnlink = () => {
 }
 
 const deleteDocs = () => {
+  if (deleting.value) return
+  deleting.value = true
+  error.value = ''
   call('crm.api.doc.delete_bulk_docs', {
     items: props.items,
     doctype: props.doctype,
@@ -157,6 +166,8 @@ const deleteDocs = () => {
     }
     show.value = false
     props.reload()
-  })
+  }).catch((err) => {
+    error.value = meetingErrorMessage(err, __('Unable to delete the selected records.'))
+  }).finally(() => { deleting.value = false })
 }
 </script>

@@ -12,7 +12,7 @@
                 {{
                   linkedDocs?.length == 0
                     ? __('Delete')
-                    : __('Delete or unlink linked documents')
+                    : props.doctype === 'CRM Organization' ? __('Linked deals prevent deletion') : __('Delete or unlink linked documents')
                 }}
               </h3>
             </Dialog.Title>
@@ -32,7 +32,7 @@
             <span class="text-ink-gray-5 text-base">
               {{
                 __(
-                  'Delete or unlink these linked documents before deleting this document',
+                  props.doctype === 'CRM Organization' ? 'This organization has linked deals. Remove or reassign those deals before deleting it. Contacts and addresses will be preserved.' : 'Delete or unlink these linked documents before deleting this document',
                 )
               }}
             </span>
@@ -71,7 +71,7 @@
       <div v-if="!confirmDeleteInfo.show" class="px-4 pb-7 pt-0 sm:px-6">
         <div class="flex flex-row-reverse gap-2">
           <Button
-            v-if="linkedDocs?.length > 0"
+            v-if="linkedDocs?.length > 0 && props.doctype !== 'CRM Organization'"
             :label="
               viewControls?.selections?.length == 0
                 ? __('Delete All')
@@ -83,7 +83,7 @@
             @click="confirmDelete()"
           />
           <Button
-            v-if="linkedDocs?.length > 0"
+            v-if="linkedDocs?.length > 0 && props.doctype !== 'CRM Organization'"
             :label="
               viewControls?.selections?.length == 0
                 ? __('Unlink All')
@@ -99,7 +99,8 @@
             variant="solid"
             icon-left="lucide-trash-2"
             :label="__('Delete')"
-            :loading="isDealCreating"
+            :loading="deleting"
+            :disabled="linkedDocsResource.loading || !!linkedDocsResource.error"
             theme="red"
             @click="deleteDoc()"
           />
@@ -142,12 +143,14 @@
           />
         </div>
       </div>
+      <p v-if="deleteError || linkedDocsResource.error" class="px-6 pb-4 text-ink-red-4" role="alert">{{ deleteError || __('Unable to check linked records. Close this dialog and try again.') }}</p>
     </template>
   </Dialog>
 </template>
 
 <script setup>
 import { Dialog, createResource, call, toast } from 'frappe-ui'
+import { meetingErrorMessage } from '@/components/Meetings/meetingErrors'
 import { useRouter } from 'vue-router'
 import { computed, ref } from 'vue'
 import {
@@ -156,6 +159,8 @@ import {
   expireDeletionMarker,
 } from '@/data/document'
 
+const deleting = ref(false)
+const deleteError = ref('')
 const show = defineModel({ type: Boolean })
 const router = useRouter()
 const props = defineProps({
@@ -271,6 +276,8 @@ const removeDocLinks = () => {
 }
 
 const deleteDoc = async () => {
+  deleting.value = true
+  deleteError.value = ''
   // Mark before the request starts: the backend's delete_doc fires a
   // realtime doc_update event that can reach the still-mounted document
   // resource before this awaited call resolves on the frontend.
@@ -282,7 +289,10 @@ const deleteDoc = async () => {
     })
   } catch (err) {
     unmarkDocumentAsDeleted(props.doctype, props.docname)
-    throw err
+    deleteError.value = meetingErrorMessage(err, __('Unable to delete this organization.'))
+    return
+  } finally {
+    deleting.value = false
   }
   expireDeletionMarker(props.doctype, props.docname)
   const label = props.title
