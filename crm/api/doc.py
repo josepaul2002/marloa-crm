@@ -736,6 +736,12 @@ def get_linked_docs_of_document(doctype: str, docname: str):
 		return []
 
 	doc.check_permission("read")
+	if doctype == "CRM Organization":
+		return [
+			{"doc": "CRM Deal", "title": row.name, "reference_doctype": "CRM Deal", "reference_docname": row.name}
+			for row in frappe.get_all("CRM Deal", filters={"organization": docname}, fields=["name"])
+			if frappe.has_permission("CRM Deal", "read", row.name)
+		]
 	return [
 		d
 		for d in get_linked_docs_data(doc)
@@ -868,6 +874,16 @@ def delete_bulk_docs(doctype: str, items: str | list, delete_linked: bool = Fals
 	items = frappe.parse_json(items)
 	if not isinstance(items, list):
 		frappe.throw(_("Items must be a list"))
+
+	if doctype == "CRM Organization":
+		# Atomic preflight: never delete linked deals via "delete linked".
+		for name in items:
+			doc = frappe.get_doc(doctype, name)
+			doc.check_permission("delete")
+			doc.check_deals_before_delete()
+		for name in items:
+			frappe.delete_doc(doctype, name)
+		return "success"
 
 	for doc in items:
 		try:

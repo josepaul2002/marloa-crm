@@ -37,6 +37,39 @@ class CRMOrganization(Document):
 
 		auto_enrich_on_create(self)
 
+	def check_deals_before_delete(self):
+		deals = frappe.get_all("CRM Deal", filters={"organization": self.name}, pluck="name")
+		if deals:
+			visible = [name for name in deals if frappe.has_permission("CRM Deal", "read", name)]
+			details = ", ".join(visible[:10]) or frappe._("Contact your CRM manager to review the linked deals")
+			frappe.throw(
+				frappe._("Cannot delete organization {0}: {1} linked deal(s). {2}. Remove or reassign the deals first.").format(
+					self.name, len(deals), details
+				),
+				frappe.LinkExistsError,
+			)
+
+	def on_trash(self):
+		# Runs for Desk, REST and CRM deletion, after Frappe checks delete permission.
+		# Check before any cleanup: a blocked deletion must not change relationships.
+		self.check_deals_before_delete()
+		frappe.db.delete("Dynamic Link", {"link_doctype": self.doctype, "link_name": self.name,
+			"parenttype": ["in", ["Contact", "Address"]]})
+		# Preserve notes, tasks, calls and research history; detach only this org's references.
+		for doctype, type_field, name_field in (
+			("CRM Enrichment Run", "reference_doctype", "reference_name"),
+			("FCRM Note", "reference_doctype", "reference_docname"),
+			("CRM Task", "reference_doctype", "reference_docname"),
+			("CRM Call Log", "reference_doctype", "reference_docname"),
+			("CRM Notification", "reference_doctype", "reference_name"),
+			("CRM Notification", "notification_type_doctype", "notification_type_doc"),
+		):
+			frappe.db.set_value(doctype, {type_field: self.doctype, name_field: self.name},
+				{type_field: None, name_field: None})
+		# The generated people map belongs exclusively to this organization.
+		for name in frappe.get_all("Marloa People Map", filters={"organization": self.name}, pluck="name"):
+			frappe.delete_doc("Marloa People Map", name, ignore_permissions=True)
+
 	def update_exchange_rate(self):
 		if self.has_value_changed("currency") or not self.exchange_rate:
 			system_currency = frappe.db.get_single_value("FCRM Settings", "currency") or "USD"
